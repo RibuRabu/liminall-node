@@ -23,6 +23,10 @@
     <p id="last-seen"></p>
     <a id="map-link" target="_blank" rel="noopener"></a>
   </main>
+  <script>
+    const parts = window.location.pathname.split('/').filter(Boolean);
+    window.NODE_SLUG = parts[0] === 'n' ? parts[1] : '';
+  </script>
   <script src="/public.js"></script>
 </body>
 </html>
