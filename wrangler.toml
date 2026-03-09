@@ -1,0 +1,11 @@
+name = "liminall-node-engine"
+main = "src/worker.js"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "liminall-node"
+
+[[r2_buckets]]
+binding = "NODE_IMAGES"
+bucket_name = "liminall-node-images"

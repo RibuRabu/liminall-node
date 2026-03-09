@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tämä on tunniste</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="card">
+    <h1>Tämä on tunniste</h1>
+    <img id="node-image" alt="Node image" class="hero" />
+    <p id="finder-message"></p>
+
+    <div id="actions" class="actions">
+      <a id="call-action" class="button hidden" target="_blank" rel="noopener">📞 Soita puhelimella</a>
+      <a id="wa-action" class="button hidden" target="_blank" rel="noopener">💬 Lähetä WhatsApp</a>
+      <a id="email-action" class="button hidden" target="_blank" rel="noopener">✉ Lähetä sähköpostia</a>
+      <button id="report-action" class="button hidden">📝 Ilmoita tästä tunnisteesta</button>
+    </div>
+
+    <p><strong id="identifier"></strong></p>
+    <p id="last-seen"></p>
+    <a id="map-link" target="_blank" rel="noopener"></a>
+  </main>
+  <script src="/public.js"></script>
+</body>
+</html>
