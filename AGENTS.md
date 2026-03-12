@@ -73,6 +73,24 @@ Important fields already exist and must be preserved:
 The `reports` table also already exists.
 Do not replace or remove it.
 
+## Public vs Owner Payloads
+
+Public API responses must only contain fields explicitly allowed for public visibility.
+
+Owner-only fields must never be returned by the public API.
+
+Visibility flags must be enforced on the backend before assembling the response payload.
+## Visibility Logic
+
+Contact fields and profile data must only appear when:
+
+- the value exists
+- the corresponding visibility flag is enabled
+
+Example:
+
+show_phone = true AND phone exists → display phone
+show_phone = false → phone must not appear in public payload
 ## Security rules
 
 Never store owner tokens in plaintext.
