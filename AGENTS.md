@@ -189,6 +189,15 @@ Store owner token hash
 Bind carrier to Node
 
 Allow carrier replacement without replacing the Node
+## Repository Hygiene
+
+Agents must keep commits narrowly scoped.
+
+Rules:
+- Do not use `git add .` unless explicitly requested.
+- Stage only the intended files for the current change.
+- Do not commit `.wrangler/` files, cache files, local state files, backup files, or temporary debug files unless explicitly requested.
+- Do not create or keep backup files such as `worker_backup.js` in commits unless explicitly requested.
 
 Output rules
 
