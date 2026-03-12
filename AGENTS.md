@@ -113,6 +113,28 @@ Static files live in /public.
 
 Do not remove or replace working public UI files with placeholders.
 
+## API Routes
+
+Public API
+
+/api/public/{slug}
+
+Owner API
+
+/api/owner/{token}
+
+Owner image upload
+
+/api/owner/{token}/image
+
+Anonymous report endpoint
+
+/api/report/{slug}
+
+Provision new node
+
+/api/provision
+
 Important:
 
 public/public.html must remain a working public page
