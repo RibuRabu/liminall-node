@@ -204,6 +204,8 @@ Do not introduce new frameworks.
 Do not move the project to another stack.
 Do not change existing naming unless explicitly asked.
 
+Do not commit cache files, wrangler state files, or backup files unless explicitly requested.
+
 Priority rule
 
 Protect working functionality first.
