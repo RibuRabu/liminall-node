@@ -45,18 +45,10 @@ export default {
     if (
       request.method === "GET" &&
       path.startsWith("/api/owner/") &&
-      path.endsWith("/auth-state")
-    ) {
-      const token = getOwnerRouteToken(path);
-      return getOwnerAuthState(request, env, token);
-    }
-
-    if (
-      request.method === "GET" &&
-      path.startsWith("/api/owner/") &&
       path.endsWith("/events")
     ) {
-      const token = getOwnerRouteToken(path);
+      const parts = path.split("/");
+      const token = parts[3];
       return getOwnerNodeEvents(env, token);
     }
 
@@ -65,7 +57,8 @@ export default {
       path.startsWith("/api/owner/") &&
       path.endsWith("/carrier")
     ) {
-      const token = getOwnerRouteToken(path);
+      const parts = path.split("/");
+      const token = parts[3];
       return replaceCarrier(request, env, token);
     }
 
@@ -74,7 +67,8 @@ export default {
       path.startsWith("/api/owner/") &&
       path.endsWith("/image")
     ) {
-      const token = getOwnerRouteToken(path);
+      const parts = path.split("/");
+      const token = parts[3];
       return uploadOwnerNodeImage(request, env, token);
     }
 
@@ -83,17 +77,18 @@ export default {
       path.startsWith("/api/owner/") &&
       path.endsWith("/image")
     ) {
-      const token = getOwnerRouteToken(path);
+      const parts = path.split("/");
+      const token = parts[3];
       return deleteOwnerNodeImage(request, env, token);
     }
 
     if (request.method === "GET" && path.startsWith("/api/owner/")) {
-      const token = getOwnerRouteToken(path);
+      const token = path.split("/").pop();
       return getOwnerNode(env, token);
     }
 
     if (request.method === "POST" && path.startsWith("/api/owner/")) {
-      const token = getOwnerRouteToken(path);
+      const token = path.split("/").pop();
       return updateOwnerNode(request, env, token);
     }
 
@@ -468,7 +463,7 @@ async function getPublicNode(env, slug) {
     contact_sms: resolveVisibilityFlag(row.show_sms, 0) ? (row.sms || "") : "",
     contact_email: resolveVisibilityFlag(row.show_email, 0) ? (row.email || "") : "",
     contact_whatsapp: resolveVisibilityFlag(row.show_whatsapp, 0) ? (row.whatsapp || "") : "",
-    preferred_contact: resolvePublicPreferredContact(row),
+    preferred_contact: sanitizePreferredContact(row.preferred_contact, "none"),
     location_label: resolveVisibilityFlag(row.show_last_recovery_point, 0) ? (row.last_recovery_label || "") : "",
     location_city: resolveVisibilityFlag(row.show_last_recovery_point, 0) ? extractLocationCity(row.last_recovery_label) : "",
     location_country: resolveVisibilityFlag(row.show_last_recovery_point, 0) ? extractLocationCountry(row.last_recovery_label) : "",
@@ -483,10 +478,6 @@ async function getPublicNode(env, slug) {
 }
 
 async function getOwnerNode(env, token) {
-  if (!token) {
-    return new Response("Owner token invalid", { status: 404 });
-  }
-
   const tokenHash = await sha256(token);
 
   const row = await env.DB.prepare(`
@@ -534,10 +525,6 @@ async function getOwnerNode(env, token) {
 }
 
 async function getOwnerNodeEvents(env, token) {
-  if (!token) {
-    return new Response("Owner token invalid", { status: 404 });
-  }
-
   const tokenHash = await sha256(token);
 
   const node = await env.DB.prepare(`
@@ -589,10 +576,6 @@ async function getOwnerNodeEvents(env, token) {
 }
 
 async function replaceCarrier(request, env, token) {
-  if (!token) {
-    return new Response("Owner token invalid", { status: 404 });
-  }
-
   const tokenHash = await sha256(token);
 
   const node = await env.DB.prepare(`
@@ -661,10 +644,6 @@ async function uploadOwnerNodeImage(request, env, token) {
     "image/webp",
     "image/gif"
   ]);
-
-  if (!token) {
-    return new Response("Owner token invalid", { status: 404 });
-  }
 
   const tokenHash = await sha256(token);
 
@@ -794,10 +773,6 @@ async function uploadOwnerNodeImage(request, env, token) {
 }
 
 async function deleteOwnerNodeImage(request, env, token) {
-  if (!token) {
-    return new Response("Owner token invalid", { status: 404 });
-  }
-
   const tokenHash = await sha256(token);
 
   const existing = await env.DB.prepare(`
@@ -893,10 +868,6 @@ async function deleteOwnerNodeImage(request, env, token) {
 }
 
 async function updateOwnerNode(request, env, token) {
-  if (!token) {
-    return new Response("Owner token invalid", { status: 404 });
-  }
-
   const tokenHash = await sha256(token);
 
   const existing = await env.DB.prepare(`
@@ -1197,72 +1168,6 @@ async function insertNodeEvent(env, { nodeId, eventType, actorType, actorRef, pa
     .run();
 }
 
-async function getOwnerAuthState(request, env, token) {
-  if (!token) {
-    return new Response("Owner token invalid", { status: 404 });
-  }
-
-  const tokenHash = await sha256(token);
-
-  const node = await env.DB.prepare(`
-    SELECT
-      owner_pin_hash,
-      owner_lockout_until
-    FROM nodes
-    WHERE owner_token_hash = ?
-    LIMIT 1
-  `)
-    .bind(tokenHash)
-    .first();
-
-  if (!node) {
-    return new Response("Owner token invalid", { status: 404 });
-  }
-
-  if (node.owner_lockout_until) {
-    const lockTime = new Date(node.owner_lockout_until).getTime();
-
-    if (Date.now() < lockTime) {
-      return Response.json({
-        state: "locked"
-      });
-    }
-  }
-
-  if (!node.owner_pin_hash) {
-    return Response.json({
-      state: "pin_not_set"
-    });
-  }
-
-  const cookie = request.headers.get("cookie") || "";
-  const hasSession = cookie.includes("owner_session=");
-
-  if (hasSession) {
-    return Response.json({
-      state: "session_valid"
-    });
-  }
-
-  return Response.json({
-    state: "pin_required"
-  });
-}
-
-function getOwnerRouteToken(path) {
-  const parts = path.split("/").filter(Boolean);
-
-  if (parts.length < 3) {
-    return null;
-  }
-
-  if (parts[0] !== "api" || parts[1] !== "owner") {
-    return null;
-  }
-
-  return parts[2] || null;
-}
-
 function buildChangeSet(existing, next) {
   const fields = [
     "status",
@@ -1548,28 +1453,6 @@ function resolveVisibilityFlag(value, fallback) {
   }
 
   return isTruthyDbValue(value);
-}
-
-function resolvePublicPreferredContact(row) {
-  const preferredContact = sanitizePreferredContact(row.preferred_contact, "none");
-
-  if (preferredContact === "phone") {
-    return resolveVisibilityFlag(row.show_phone, 0) && row.phone ? "phone" : "none";
-  }
-
-  if (preferredContact === "sms") {
-    return resolveVisibilityFlag(row.show_sms, 0) && row.sms ? "sms" : "none";
-  }
-
-  if (preferredContact === "email") {
-    return resolveVisibilityFlag(row.show_email, 0) && row.email ? "email" : "none";
-  }
-
-  if (preferredContact === "whatsapp") {
-    return resolveVisibilityFlag(row.show_whatsapp, 0) && row.whatsapp ? "whatsapp" : "none";
-  }
-
-  return "none";
 }
 
 function safeParseJson(value) {

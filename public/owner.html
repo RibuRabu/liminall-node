@@ -2,535 +2,242 @@
 <html lang="fi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Owner Control</title>
-  <style>
-    :root {
-      color-scheme: light;
-      --bg: #ececec;
-      --card: #ffffff;
-      --border: #d8d8d8;
-      --text: #111111;
-      --muted: #666666;
-      --accent: #111111;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      font-family: Arial, Helvetica, sans-serif;
-      color: var(--text);
-      background: var(--bg);
-    }
-
-    .wrap {
-      max-width: 760px;
-      margin: 0 auto;
-      padding: 24px 16px 48px;
-    }
-
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 20px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-    }
-
-    h1, h2 {
-      margin: 0 0 16px;
-    }
-
-    h1 {
-      font-size: 2rem;
-    }
-
-    h2 {
-      font-size: 1.15rem;
-      margin-top: 24px;
-    }
-
-    p {
-      margin: 0 0 12px;
-      line-height: 1.5;
-    }
-
-    .muted {
-      color: var(--muted);
-    }
-
-    .stack {
-      display: grid;
-      gap: 12px;
-    }
-
-    label {
-      display: grid;
-      gap: 6px;
-      font-size: 0.95rem;
-      font-weight: 600;
-    }
-
-    input,
-    textarea,
-    select,
-    button {
-      font: inherit;
-    }
-
-    input,
-    textarea,
-    select {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: #fff;
-      color: var(--text);
-    }
-
-    textarea {
-      min-height: 110px;
-      resize: vertical;
-    }
-
-    fieldset {
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px 14px 8px;
-      margin: 0;
-    }
-
-    legend {
-      padding: 0 6px;
-      font-weight: 700;
-    }
-
-    .checks {
-      display: grid;
-      gap: 10px;
-      margin-top: 4px;
-    }
-
-    .check {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-weight: 400;
-    }
-
-    .check input {
-      width: auto;
-      margin: 0;
-    }
-
-    .row {
-      display: grid;
-      gap: 12px;
-    }
-
-    @media (min-width: 720px) {
-      .row.two {
-        grid-template-columns: 1fr 1fr;
-      }
-
-      .row.three {
-        grid-template-columns: 1fr 1fr 1fr;
-      }
-    }
-
-    .actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 18px;
-    }
-
-    button {
-      border: 0;
-      border-radius: 10px;
-      padding: 11px 16px;
-      background: var(--accent);
-      color: #fff;
-      cursor: pointer;
-      font-weight: 700;
-    }
-
-    button.secondary {
-      background: #f3f3f3;
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
-
-    button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    .status-box {
-      white-space: pre-wrap;
-      background: #f7f7f7;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px;
-      margin-top: 16px;
-      font-size: 0.92rem;
-    }
-
-    .preview {
-      display: grid;
-      gap: 10px;
-      margin-top: 14px;
-    }
-
-    .preview img {
-      width: 100%;
-      max-width: 280px;
-      aspect-ratio: 1 / 1;
-      object-fit: cover;
-      border-radius: 14px;
-      border: 1px solid var(--border);
-      background: #fafafa;
-    }
-
-    .token {
-      word-break: break-all;
-      background: #f7f7f7;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 12px;
-      font-family: Consolas, monospace;
-      font-size: 0.9rem;
-    }
-
-    .hidden {
-      display: none;
-    }
-  </style>
+  <title>Liminall Node</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/owner.css" />
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <h1>Owner Control</h1>
-      <p class="muted">Hallinnoi tätä tunnistetta owner-tokenilla.</p>
+  <div class="page-shell">
+    <div class="page">
+      <div class="hero">
+        <div class="hero-inner">
+          <div class="topbar">
+            <div class="topbar-left">
+              <div class="brand-row">
+                <div class="brand-logo-frame">
+                  <img src="/logo.svg" alt="Liminall" class="brand-logo" />
+                </div>
 
-      <div id="token-state" class="token">Ladataan owner-tokenia...</div>
+                <div class="brand-meta">
+                  <div class="brand-name">Liminall</div>
+                  <div class="eyebrow">Node-hallinta</div>
+                </div>
+              </div>
 
-      <form id="owner-form" class="stack hidden">
-        <h2>Perustiedot</h2>
+              <h1 id="pageTitle">Node-hallinta</h1>
+              <div id="pageSubtitle" class="muted">Hallitse tunnisteen näkyvyyttä, yhteystapoja ja julkista sivua.</div>
+            </div>
 
-        <div class="row two">
-          <label>
-            Nimi
-            <input name="profile_name" type="text" />
-          </label>
-
-          <label>
-            Tunniste / ID
-            <input name="public_identifier" type="text" />
-          </label>
-        </div>
-
-        <label>
-          Viesti löytäjälle
-          <textarea name="public_message"></textarea>
-        </label>
-
-        <div class="row two">
-          <label>
-            Status
-            <select name="status">
-              <option value="active">active</option>
-              <option value="lost">lost</option>
-            </select>
-          </label>
-
-          <label>
-            Kuvan URL
-            <input name="profile_image_url" type="text" />
-          </label>
-        </div>
-
-        <div class="preview">
-          <strong>Kuvan esikatselu</strong>
-          <img id="image-preview" alt="Kuvan esikatselu" />
-        </div>
-
-        <h2>Yhteystiedot</h2>
-
-        <div class="row two">
-          <label>
-            Puhelin
-            <input name="phone" type="text" />
-          </label>
-
-          <label>
-            Sähköposti
-            <input name="email" type="email" />
-          </label>
-        </div>
-
-        <label>
-          WhatsApp
-          <input name="whatsapp" type="text" />
-        </label>
-
-        <h2>Viimeinen havaintopaikka</h2>
-
-        <div class="row three">
-          <label>
-            Paikan nimi
-            <input name="last_recovery_label" type="text" />
-          </label>
-
-          <label>
-            Lat
-            <input name="last_recovery_lat" type="number" step="any" />
-          </label>
-
-          <label>
-            Lng
-            <input name="last_recovery_lng" type="number" step="any" />
-          </label>
-        </div>
-
-        <h2>Näkyvyysasetukset</h2>
-
-        <fieldset>
-          <legend>Public näkyvyys</legend>
-          <div class="checks">
-            <label class="check"><input type="checkbox" name="show_profile_name" /> Näytä nimi</label>
-            <label class="check"><input type="checkbox" name="show_profile_image" /> Näytä kuva</label>
-            <label class="check"><input type="checkbox" name="show_identifier" /> Näytä tunniste</label>
-            <label class="check"><input type="checkbox" name="show_message" /> Näytä viesti</label>
-            <label class="check"><input type="checkbox" name="show_phone" /> Näytä puhelin</label>
-            <label class="check"><input type="checkbox" name="show_email" /> Näytä sähköposti</label>
-            <label class="check"><input type="checkbox" name="show_whatsapp" /> Näytä WhatsApp</label>
-            <label class="check"><input type="checkbox" name="show_last_recovery_point" /> Näytä viimeinen havaintopaikka</label>
-            <label class="check"><input type="checkbox" name="allow_anonymous_report" /> Salli anonyymi ilmoitus</label>
+            <div class="topbar-right">
+              <a id="openPublicPageButton" class="link-button disabled" href="#" target="_blank" rel="noopener noreferrer">Avaa Node</a>
+              <button id="langFi" class="lang-button" type="button">FI</button>
+              <button id="langEn" class="lang-button" type="button">EN</button>
+            </div>
           </div>
-        </fieldset>
 
-        <div class="actions">
-          <button type="submit" id="save-button">Tallenna</button>
-          <button type="button" class="secondary" id="reload-button">Lataa uudelleen</button>
+          <div id="actionStatus" class="hero-notice"></div>
+
+          <div class="hero-summary">
+            <div id="heroSummary" class="hero-summary-grid"></div>
+          </div>
         </div>
-      </form>
+      </div>
 
-      <h2>Kuvan lataus</h2>
-      <form id="image-form" class="stack hidden">
-        <label>
-          Valitse kuva
-          <input type="file" id="image-file" accept="image/*" />
-        </label>
-        <div class="actions">
-          <button type="submit" id="upload-button">Lataa kuva</button>
+      <div class="main-grid">
+        <div class="stack">
+          <div class="card">
+            <div class="card-header">
+              <h2 id="controlsCardTitle">Tunnisteen asetukset</h2>
+            </div>
+
+            <div class="section-stack">
+              <div class="section-block">
+                <h3 id="statusSectionTitle">Tila</h3>
+                <div class="button-row">
+                  <button id="setActiveButton" class="status-action-button status-action-active" type="button"></button>
+                  <button id="setLostButton" class="status-action-button status-action-lost" type="button"></button>
+                </div>
+              </div>
+
+              <div class="section-block">
+                <h3 id="identitySectionTitle">Tunniste</h3>
+
+                <div class="field">
+                  <label id="profileNameLabel" class="field-label" for="profileName"></label>
+                  <input id="profileName" type="text" maxlength="120" />
+                </div>
+
+                <div class="field">
+                  <label id="publicMessageLabel" class="field-label" for="publicMessage"></label>
+                  <textarea id="publicMessage" maxlength="2000"></textarea>
+                </div>
+
+                <div class="button-row">
+                  <button id="saveIdentityButton" class="primary-button" type="button"></button>
+                </div>
+              </div>
+
+              <div class="section-block">
+                <h3 id="locationSectionTitle">Sijainti</h3>
+                <p id="locationSectionIntro" class="muted small"></p>
+
+                <div class="field">
+                  <label id="locationLabel" class="field-label" for="locationInput"></label>
+                  <input id="locationInput" type="text" maxlength="255" />
+                  <div id="locationHint" class="field-hint"></div>
+                </div>
+
+                <div class="button-row">
+                  <label class="contact-toggle">
+                    <input id="showLocationInput" type="checkbox" />
+                    <span id="showLocationLabel"></span>
+                  </label>
+                </div>
+
+                <div class="button-row">
+                  <button id="saveLocationButton" class="primary-button" type="button"></button>
+                </div>
+              </div>
+
+              <div class="section-block">
+                <h3 id="contactSectionTitle">Yhteystavat</h3>
+                <p id="contactSectionIntro" class="muted small"></p>
+
+                <div class="field">
+                  <label id="preferredContactLabel" class="field-label" for="preferredContact"></label>
+                  <select id="preferredContact">
+                    <option value="none"></option>
+                    <option value="phone"></option>
+                    <option value="sms"></option>
+                    <option value="whatsapp"></option>
+                    <option value="email"></option>
+                  </select>
+                  <div id="preferredContactHint" class="field-hint"></div>
+                </div>
+
+                <div class="contact-grid">
+                  <div class="contact-row">
+                    <div class="contact-row-top">
+                      <label id="phoneLabel" class="field-label" for="phoneInput"></label>
+                      <label class="contact-toggle">
+                        <input id="showPhoneInput" type="checkbox" />
+                        <span id="showPhoneLabel"></span>
+                      </label>
+                    </div>
+                    <input id="phoneInput" type="text" maxlength="100" placeholder="" />
+                  </div>
+
+                  <div class="contact-row">
+                    <div class="contact-row-top">
+                      <label id="smsLabel" class="field-label" for="smsInput"></label>
+                      <label class="contact-toggle">
+                        <input id="showSmsInput" type="checkbox" />
+                        <span id="showSmsLabel"></span>
+                      </label>
+                    </div>
+                    <input id="smsInput" type="text" maxlength="100" placeholder="" />
+                  </div>
+
+                  <div class="contact-row">
+                    <div class="contact-row-top">
+                      <label id="whatsappLabel" class="field-label" for="whatsappInput"></label>
+                      <label class="contact-toggle">
+                        <input id="showWhatsappInput" type="checkbox" />
+                        <span id="showWhatsappLabel"></span>
+                      </label>
+                    </div>
+                    <input id="whatsappInput" type="text" maxlength="100" placeholder="" />
+                  </div>
+
+                  <div class="contact-row">
+                    <div class="contact-row-top">
+                      <label id="emailLabel" class="field-label" for="emailInput"></label>
+                      <label class="contact-toggle">
+                        <input id="showEmailInput" type="checkbox" />
+                        <span id="showEmailLabel"></span>
+                      </label>
+                    </div>
+                    <input id="emailInput" type="text" maxlength="255" placeholder="" />
+                  </div>
+                </div>
+
+                <div class="button-row">
+                  <button id="saveContactSettingsButton" class="primary-button" type="button"></button>
+                </div>
+              </div>
+
+              <div class="section-block">
+                <h3 id="scannerMessagesSectionTitle">Lähetä viesti omistajalle</h3>
+                <p id="scannerMessagesIntro" class="muted small"></p>
+                <div class="button-row">
+                  <button id="toggleReportsButton" class="secondary-button" type="button"></button>
+                </div>
+              </div>
+
+              <div class="section-block">
+                <h3 id="carrierSectionTitle">Carrier</h3>
+
+                <div class="field">
+                  <label id="carrierReasonLabel" class="field-label" for="carrierReason"></label>
+                  <input id="carrierReason" type="text" maxlength="255" />
+                </div>
+
+                <div class="field">
+                  <label id="carrierNotesLabel" class="field-label" for="carrierNotes"></label>
+                  <textarea id="carrierNotes" maxlength="1000"></textarea>
+                </div>
+
+                <div class="button-row">
+                  <button id="replaceCarrierButton" class="secondary-button" type="button"></button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </form>
 
-      <div id="status-box" class="status-box">Valmis.</div>
+        <div class="stack">
+          <div class="card">
+            <div class="node-panel">
+              <div class="node-panel-head">
+                <div class="node-panel-name">
+                  <div class="muted small" id="nodeCardTitle">Node-linkki</div>
+                  <div class="node-panel-title" id="nodePanelTitle">Node</div>
+                  <div class="node-panel-subtitle" id="controlsCardIntro"></div>
+                </div>
+              </div>
+
+              <div id="nodeInfo"></div>
+
+              <div class="node-image-card">
+                <div id="nodeImagePreview" class="node-image-preview empty"></div>
+
+                <div class="field">
+                  <label id="nodeImageInputLabel" class="field-label" for="nodeImageInput"></label>
+                  <input id="nodeImageInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
+                  <div id="nodeImageHint" class="field-hint"></div>
+                </div>
+
+                <div class="button-row">
+                  <button id="saveNodeImageButton" class="primary-button" type="button"></button>
+                  <button id="clearNodeImageSelectionButton" class="ghost-button" type="button"></button>
+                  <button id="removeNodeImageButton" class="danger-button" type="button"></button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2 id="timelineTitle"></h2>
+            </div>
+            <div id="timeline" class="timeline"></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <script>
-    const statusBox = document.getElementById("status-box");
-    const tokenState = document.getElementById("token-state");
-    const ownerForm = document.getElementById("owner-form");
-    const imageForm = document.getElementById("image-form");
-    const imagePreview = document.getElementById("image-preview");
-    const reloadButton = document.getElementById("reload-button");
-    const saveButton = document.getElementById("save-button");
-    const uploadButton = document.getElementById("upload-button");
-
-    function setStatus(message) {
-      statusBox.textContent = message;
-    }
-
-    function getTokenFromPath() {
-      const parts = window.location.pathname.split("/").filter(Boolean);
-      if (parts.length >= 2 && parts[0] === "o") return parts[1];
-
-      const qp = new URLSearchParams(window.location.search);
-      return qp.get("token") || "";
-    }
-
-    const ownerToken = getTokenFromPath();
-
-    function setImagePreview(url) {
-      if (url && url.trim()) {
-        imagePreview.src = url;
-        imagePreview.classList.remove("hidden");
-      } else {
-        imagePreview.removeAttribute("src");
-        imagePreview.classList.add("hidden");
-      }
-    }
-
-    function toCheckboxValue(value) {
-      return value === 1 || value === "1" || value === true;
-    }
-
-    function fillForm(data) {
-      ownerForm.elements.profile_name.value = data.profile_name || "";
-      ownerForm.elements.public_identifier.value = data.public_identifier || "";
-      ownerForm.elements.public_message.value = data.public_message || "";
-      ownerForm.elements.status.value = data.status || "active";
-      ownerForm.elements.profile_image_url.value = data.profile_image_url || "";
-      ownerForm.elements.phone.value = data.phone || "";
-      ownerForm.elements.email.value = data.email || "";
-      ownerForm.elements.whatsapp.value = data.whatsapp || "";
-      ownerForm.elements.last_recovery_label.value = data.last_recovery_label || "";
-      ownerForm.elements.last_recovery_lat.value = data.last_recovery_lat ?? "";
-      ownerForm.elements.last_recovery_lng.value = data.last_recovery_lng ?? "";
-
-      ownerForm.elements.show_profile_name.checked = toCheckboxValue(data.show_profile_name);
-      ownerForm.elements.show_profile_image.checked = toCheckboxValue(data.show_profile_image);
-      ownerForm.elements.show_identifier.checked = toCheckboxValue(data.show_identifier);
-      ownerForm.elements.show_message.checked = toCheckboxValue(data.show_message);
-      ownerForm.elements.show_phone.checked = toCheckboxValue(data.show_phone);
-      ownerForm.elements.show_email.checked = toCheckboxValue(data.show_email);
-      ownerForm.elements.show_whatsapp.checked = toCheckboxValue(data.show_whatsapp);
-      ownerForm.elements.show_last_recovery_point.checked = toCheckboxValue(data.show_last_recovery_point);
-      ownerForm.elements.allow_anonymous_report.checked = toCheckboxValue(data.allow_anonymous_report);
-
-      setImagePreview(data.profile_image_url || "");
-    }
-
-    async function loadOwnerData() {
-      if (!ownerToken) {
-        tokenState.textContent = "Owner-token puuttuu URL:sta.";
-        setStatus("Virhe: owner-token puuttuu.");
-        return;
-      }
-
-      tokenState.textContent = `Owner token: ${ownerToken}`;
-
-      try {
-        setStatus("Ladataan owner-dataa...");
-        const response = await fetch(`/api/owner/${ownerToken}`);
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || "Owner-datan haku epäonnistui.");
-        }
-
-        fillForm(data);
-        ownerForm.classList.remove("hidden");
-        imageForm.classList.remove("hidden");
-        setStatus("Owner-data ladattu.");
-      } catch (error) {
-        setStatus(`Virhe: ${error.message}`);
-      }
-    }
-
-    function collectPayload() {
-      return {
-        profile_name: ownerForm.elements.profile_name.value.trim(),
-        public_identifier: ownerForm.elements.public_identifier.value.trim(),
-        public_message: ownerForm.elements.public_message.value.trim(),
-        status: ownerForm.elements.status.value,
-        profile_image_url: ownerForm.elements.profile_image_url.value.trim(),
-        phone: ownerForm.elements.phone.value.trim(),
-        email: ownerForm.elements.email.value.trim(),
-        whatsapp: ownerForm.elements.whatsapp.value.trim(),
-        last_recovery_label: ownerForm.elements.last_recovery_label.value.trim(),
-        last_recovery_lat: ownerForm.elements.last_recovery_lat.value === "" ? null : Number(ownerForm.elements.last_recovery_lat.value),
-        last_recovery_lng: ownerForm.elements.last_recovery_lng.value === "" ? null : Number(ownerForm.elements.last_recovery_lng.value),
-        show_profile_name: ownerForm.elements.show_profile_name.checked ? 1 : 0,
-        show_profile_image: ownerForm.elements.show_profile_image.checked ? 1 : 0,
-        show_identifier: ownerForm.elements.show_identifier.checked ? 1 : 0,
-        show_message: ownerForm.elements.show_message.checked ? 1 : 0,
-        show_phone: ownerForm.elements.show_phone.checked ? 1 : 0,
-        show_email: ownerForm.elements.show_email.checked ? 1 : 0,
-        show_whatsapp: ownerForm.elements.show_whatsapp.checked ? 1 : 0,
-        show_last_recovery_point: ownerForm.elements.show_last_recovery_point.checked ? 1 : 0,
-        allow_anonymous_report: ownerForm.elements.allow_anonymous_report.checked ? 1 : 0
-      };
-    }
-
-    ownerForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-
-      try {
-        saveButton.disabled = true;
-        setStatus("Tallennetaan...");
-
-        const payload = collectPayload();
-        const response = await fetch(`/api/owner/${ownerToken}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-
-        const data = await response.json().catch(() => ({}));
-
-        if (!response.ok) {
-          throw new Error(data.error || "Tallennus epäonnistui.");
-        }
-
-        setImagePreview(payload.profile_image_url);
-        setStatus("Tallennus onnistui.");
-      } catch (error) {
-        setStatus(`Virhe: ${error.message}`);
-      } finally {
-        saveButton.disabled = false;
-      }
-    });
-
-    reloadButton.addEventListener("click", async () => {
-      await loadOwnerData();
-    });
-
-    ownerForm.elements.profile_image_url.addEventListener("input", (event) => {
-      setImagePreview(event.target.value);
-    });
-
-    imageForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-
-      const fileInput = document.getElementById("image-file");
-      const file = fileInput.files[0];
-
-      if (!file) {
-        setStatus("Valitse ensin kuva.");
-        return;
-      }
-
-      try {
-        uploadButton.disabled = true;
-        setStatus("Ladataan kuvaa...");
-
-        const formData = new FormData();
-        formData.append("image", file);
-
-        const response = await fetch(`/api/owner/${ownerToken}/image`, {
-          method: "POST",
-          body: formData
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || "Kuvan lataus epäonnistui.");
-        }
-
-        if (data.imageUrl) {
-          ownerForm.elements.profile_image_url.value = data.imageUrl;
-          setImagePreview(data.imageUrl);
-        }
-
-        setStatus("Kuvan lataus onnistui.");
-      } catch (error) {
-        setStatus(`Virhe: ${error.message}`);
-      } finally {
-        uploadButton.disabled = false;
-      }
-    });
-
-    loadOwnerData();
-  </script>
+  <script src="/owner.js"></script>
 </body>
 </html>

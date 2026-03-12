@@ -1,56 +1,434 @@
+@font-face {
+  font-family: "RotisSansSerif";
+  src: url("/fonts/RotisSansSerif.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+* {
+  box-sizing: border-box;
+}
+
 body {
-  font-family: system-ui, sans-serif;
-  background: #f4f6f8;
   margin: 0;
-  padding: 2rem;
+  padding: 0;
+  font-family: "RotisSansSerif", Arial, Helvetica, sans-serif;
+  color: #171717;
+  background: linear-gradient(
+    90deg,
+    #c9baf0 0%,
+    #c3d7f2 45%,
+    #bfe8ef 75%,
+    #c9f2e6 100%
+  );
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 18px 18px 28px 18px;
 }
 
 .card {
-  max-width: 760px;
-  margin: 0 auto;
-  background: #fff;
-  border-radius: 14px;
-  padding: 1.25rem;
-}
-
-.hero {
   width: 100%;
-  max-height: 360px;
-  object-fit: cover;
-  border-radius: 12px;
+  max-width: 420px;
+  background: rgba(255, 255, 255, 0.86);
+  border-radius: 24px;
+  padding: 28px 24px 28px 24px;
+  box-shadow:
+    0 14px 40px rgba(0, 0, 0, 0.10),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 
-.actions {
-  display: grid;
-  gap: 0.6rem;
-  margin: 1rem 0;
+/* header */
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
 }
 
-.button {
-  display: block;
-  width: 100%;
-  border: 0;
-  border-radius: 10px;
-  padding: 0.7rem 1rem;
-  background: #0f62fe;
-  color: #fff;
-  text-decoration: none;
-  text-align: left;
+.brand {
+  font-size: 14px;
+  line-height: 1.1;
+  opacity: 0.8;
+}
+
+.lang {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lang span {
+  opacity: 0.35;
+}
+
+.lang button {
+  min-width: 44px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,0.96),
+    rgba(255,255,255,0.86)
+  );
+  color: #1b1b1b;
+  font-family: "RotisSansSerif", Arial, Helvetica, sans-serif;
+  font-size: 0.95rem;
   cursor: pointer;
+  box-shadow:
+    0 8px 18px rgba(0,0,0,0.07),
+    inset 0 1px 0 rgba(255,255,255,0.76);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
 }
 
-.hidden {
-  display: none;
+.lang button:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 12px 24px rgba(0,0,0,0.10),
+    inset 0 1px 0 rgba(255,255,255,0.86);
 }
 
-label,
-fieldset {
+.lang button.active {
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,1),
+    rgba(247,250,252,0.92)
+  );
+}
+
+h1 {
+  margin: 8px 0 4px 0;
+  font-size: 2.05rem;
+  line-height: 1.02;
+}
+
+.node-id {
+  margin-bottom: 14px;
+  opacity: 0.48;
+  font-size: 0.98rem;
+}
+
+/* status */
+
+.node-status-wrap {
+  margin-bottom: 18px;
+}
+
+.node-status-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 0.86rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255,255,255,0.72);
+  box-shadow:
+    0 8px 18px rgba(0,0,0,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.72);
+}
+
+.node-status-badge.status-active {
+  color: #255f3a;
+  background: linear-gradient(
+    180deg,
+    rgba(232, 255, 240, 0.96),
+    rgba(219, 244, 226, 0.88)
+  );
+}
+
+.node-status-badge.status-lost {
+  color: #7a1f16;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 235, 231, 0.98),
+    rgba(247, 213, 206, 0.90)
+  );
+}
+
+.node-status-badge.status-unknown {
+  color: #4c4c4c;
+  background: linear-gradient(
+    180deg,
+    rgba(245, 245, 245, 0.96),
+    rgba(232, 232, 232, 0.88)
+  );
+}
+
+.node-message {
+  margin-bottom: 18px;
+  line-height: 1.45;
+}
+
+/* image */
+
+.node-image {
+  margin-bottom: 18px;
+}
+
+.node-image img {
+  width: 100%;
   display: block;
-  margin: 0.5rem 0;
+  border-radius: 20px;
+  object-fit: cover;
+  box-shadow: 0 10px 22px rgba(0,0,0,0.10);
+}
+
+/* primary + secondary actions */
+
+.node-primary-action {
+  margin-bottom: 0;
+}
+
+.node-secondary-actions {
+  margin-bottom: 22px;
+}
+
+.secondary-actions-title {
+  margin-top: 32px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  opacity: 0.6;
+}
+
+.node-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.action {
+  text-decoration: none;
+  color: #1b1b1b;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 18px;
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,0.95),
+    rgba(255,255,255,0.85)
+  );
+  border: 1px solid rgba(255,255,255,0.62);
+  box-shadow:
+    0 10px 25px rgba(0,0,0,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.72);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease,
+    opacity 0.18s ease;
+}
+
+.node-secondary-actions .action {
+  padding: 14px 18px;
+  box-shadow:
+    0 8px 20px rgba(0,0,0,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.70);
+}
+
+.node-secondary-actions .action .action-icon,
+.node-secondary-actions .action .action-arrow {
+  font-size: 15px;
+}
+
+.action:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 16px 35px rgba(0,0,0,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.82);
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,1),
+    rgba(255,255,255,0.92)
+  );
+}
+
+.action-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.action-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.action-arrow {
+  opacity: 0.55;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.action-disabled {
+  opacity: 0.42;
+  pointer-events: none;
+}
+
+/* location */
+
+.node-location {
+  margin-top: 2px;
+  margin-bottom: 28px;
+}
+
+.location-title {
+  margin-bottom: 6px;
+  font-size: 0.95rem;
+  opacity: 0.55;
+}
+
+.location-text {
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.map-link {
+  display: inline-block;
+  margin-top: 2px;
+  text-decoration: none;
+  color: #111;
+  font-weight: 600;
+}
+
+/* report */
+
+.report-section {
+  margin-top: 6px;
+}
+
+.report-section h2 {
+  margin: 0 0 8px 0;
+  font-size: 1.15rem;
+  line-height: 1.12;
+}
+
+.report-section p {
+  margin: 0 0 12px 0;
+  line-height: 1.45;
+}
+
+.report-section label {
+  display: block;
+  margin: 0 0 6px 0;
+  font-size: 0.98rem;
 }
 
 input,
-textarea,
-select {
+textarea {
   width: 100%;
+  display: block;
+  margin: 0 0 16px 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(255,255,255,0.70);
+  border-radius: 20px;
+  outline: none;
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,0.88),
+    rgba(252,252,252,0.80)
+  );
+  color: #1b1b1b;
+  font-family: "RotisSansSerif", Arial, Helvetica, sans-serif;
+  font-size: 1rem;
+  box-shadow:
+    0 8px 18px rgba(0,0,0,0.05),
+    inset 0 1px 0 rgba(255,255,255,0.72);
+  transition:
+    box-shadow 0.18s ease,
+    background 0.18s ease,
+    transform 0.18s ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(27,27,27,0.34);
+}
+
+input:focus,
+textarea:focus {
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,0.96),
+    rgba(248,251,253,0.90)
+  );
+  box-shadow:
+    0 12px 24px rgba(0,0,0,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.86);
+  transform: translateY(-1px);
+}
+
+textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+button {
+  margin-top: 4px;
+  padding: 14px 22px;
+  border: 1px solid rgba(255,255,255,0.72);
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,0.96),
+    rgba(255,255,255,0.84)
+  );
+  color: #1b1b1b;
+  font-family: "RotisSansSerif", Arial, Helvetica, sans-serif;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow:
+    0 10px 24px rgba(0,0,0,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.78);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 16px 34px rgba(0,0,0,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.88);
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,1),
+    rgba(248,251,253,0.92)
+  );
+}
+
+#report-feedback {
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: 8px 8px 20px 8px;
+  }
+
+  .card {
+    max-width: 100%;
+    border-radius: 22px;
+    padding: 24px 18px 24px 18px;
+  }
 }
