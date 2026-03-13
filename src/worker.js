@@ -20,6 +20,10 @@ export default {
       return servePublicPage(request, env);
     }
 
+    if (request.method === "GET" && path === "/owner") {
+      return serveOwnerPage(request, env);
+    }
+
     if (request.method === "GET" && path.startsWith("/o/")) {
       return serveOwnerPage(request, env);
     }
