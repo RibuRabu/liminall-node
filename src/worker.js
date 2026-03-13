@@ -145,6 +145,7 @@ const OWNER_SESSION_COOKIE_NAME = "owner_session";
 const OWNER_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24;
 const OWNER_PIN_MAX_ATTEMPTS = 5;
 const OWNER_PIN_LOCKOUT_SECONDS = 15 * 60;
+const PUBLIC_APP_BASE_URL = "https://node.liminall.fi";
 
 async function servePublicPage(request, env) {
   return fetchInternalHtmlAsset(request, env, "/public.html");
@@ -272,8 +273,8 @@ async function provisionNode(request, env) {
   });
 
   return Response.json({
-    public_url: `/n/${slug}`,
-    owner_url: `/o/${ownerToken}`,
+    public_url: `${PUBLIC_APP_BASE_URL}/n/${slug}`,
+    owner_url: `${PUBLIC_APP_BASE_URL}/o/${ownerToken}`,
     identifier
   });
 }
