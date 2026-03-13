@@ -43,6 +43,15 @@ export default {
     }
 
     if (
+      request.method === "POST" &&
+      path.startsWith("/api/owner/") &&
+      path.endsWith("/auth-state")
+    ) {
+      const token = getOwnerRouteToken(path);
+      return postOwnerAuthState(request, env, token);
+    }
+
+    if (
       request.method === "GET" &&
       path.startsWith("/api/owner/") &&
       path.endsWith("/auth-state")
@@ -57,7 +66,7 @@ export default {
       path.endsWith("/events")
     ) {
       const token = getOwnerRouteToken(path);
-      return getOwnerNodeEvents(env, token);
+      return getOwnerNodeEvents(request, env, token);
     }
 
     if (
@@ -89,7 +98,7 @@ export default {
 
     if (request.method === "GET" && path.startsWith("/api/owner/")) {
       const token = getOwnerRouteToken(path);
-      return getOwnerNode(env, token);
+      return getOwnerNode(request, env, token);
     }
 
     if (request.method === "POST" && path.startsWith("/api/owner/")) {
@@ -113,6 +122,9 @@ export default {
     return new Response("Not found", { status: 404 });
   }
 };
+
+const OWNER_SESSION_COOKIE_NAME = "owner_session";
+const OWNER_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24;
 
 async function servePublicPage(request, env) {
   return fetchInternalHtmlAsset(request, env, "/public.html");
@@ -482,12 +494,12 @@ async function getPublicNode(env, slug) {
   return Response.json(publicData);
 }
 
-async function getOwnerNode(env, token) {
-  if (!token) {
-    return new Response("Owner token invalid", { status: 404 });
-  }
+async function getOwnerNode(request, env, token) {
+  const auth = await requireAuthorizedOwner(request, env, token);
 
-  const tokenHash = await sha256(token);
+  if (auth.response) {
+    return auth.response;
+  }
 
   const row = await env.DB.prepare(`
     SELECT
@@ -523,22 +535,18 @@ async function getOwnerNode(env, token) {
     WHERE owner_token_hash = ?
     LIMIT 1
   `)
-    .bind(tokenHash)
+    .bind(auth.tokenHash)
     .first();
-
-  if (!row) {
-    return new Response("Owner token invalid", { status: 404 });
-  }
 
   return Response.json(row);
 }
 
-async function getOwnerNodeEvents(env, token) {
-  if (!token) {
-    return new Response("Owner token invalid", { status: 404 });
-  }
+async function getOwnerNodeEvents(request, env, token) {
+  const auth = await requireAuthorizedOwner(request, env, token);
 
-  const tokenHash = await sha256(token);
+  if (auth.response) {
+    return auth.response;
+  }
 
   const node = await env.DB.prepare(`
     SELECT
@@ -549,12 +557,8 @@ async function getOwnerNodeEvents(env, token) {
     WHERE owner_token_hash = ?
     LIMIT 1
   `)
-    .bind(tokenHash)
+    .bind(auth.tokenHash)
     .first();
-
-  if (!node) {
-    return new Response("Owner token invalid", { status: 404 });
-  }
 
   const rows = await env.DB.prepare(`
     SELECT
@@ -589,11 +593,11 @@ async function getOwnerNodeEvents(env, token) {
 }
 
 async function replaceCarrier(request, env, token) {
-  if (!token) {
-    return new Response("Owner token invalid", { status: 404 });
-  }
+  const auth = await requireAuthorizedOwner(request, env, token);
 
-  const tokenHash = await sha256(token);
+  if (auth.response) {
+    return auth.response;
+  }
 
   const node = await env.DB.prepare(`
     SELECT
@@ -605,12 +609,8 @@ async function replaceCarrier(request, env, token) {
     WHERE owner_token_hash = ?
     LIMIT 1
   `)
-    .bind(tokenHash)
+    .bind(auth.tokenHash)
     .first();
-
-  if (!node) {
-    return new Response("Owner token invalid", { status: 404 });
-  }
 
   let body = {};
 
@@ -662,11 +662,11 @@ async function uploadOwnerNodeImage(request, env, token) {
     "image/gif"
   ]);
 
-  if (!token) {
-    return new Response("Owner token invalid", { status: 404 });
-  }
+  const auth = await requireAuthorizedOwner(request, env, token);
 
-  const tokenHash = await sha256(token);
+  if (auth.response) {
+    return auth.response;
+  }
 
   const existing = await env.DB.prepare(`
     SELECT
@@ -678,12 +678,8 @@ async function uploadOwnerNodeImage(request, env, token) {
     WHERE owner_token_hash = ?
     LIMIT 1
   `)
-    .bind(tokenHash)
+    .bind(auth.tokenHash)
     .first();
-
-  if (!existing) {
-    return new Response("Owner token invalid", { status: 404 });
-  }
 
   let formData;
 
@@ -794,11 +790,11 @@ async function uploadOwnerNodeImage(request, env, token) {
 }
 
 async function deleteOwnerNodeImage(request, env, token) {
-  if (!token) {
-    return new Response("Owner token invalid", { status: 404 });
-  }
+  const auth = await requireAuthorizedOwner(request, env, token);
 
-  const tokenHash = await sha256(token);
+  if (auth.response) {
+    return auth.response;
+  }
 
   const existing = await env.DB.prepare(`
     SELECT
@@ -810,12 +806,8 @@ async function deleteOwnerNodeImage(request, env, token) {
     WHERE owner_token_hash = ?
     LIMIT 1
   `)
-    .bind(tokenHash)
+    .bind(auth.tokenHash)
     .first();
-
-  if (!existing) {
-    return new Response("Owner token invalid", { status: 404 });
-  }
 
   const previousImageUrl = existing.profile_image_url;
   const previousImageKey = getImageKeyFromUrl(previousImageUrl);
@@ -893,11 +885,11 @@ async function deleteOwnerNodeImage(request, env, token) {
 }
 
 async function updateOwnerNode(request, env, token) {
-  if (!token) {
-    return new Response("Owner token invalid", { status: 404 });
-  }
+  const auth = await requireAuthorizedOwner(request, env, token);
 
-  const tokenHash = await sha256(token);
+  if (auth.response) {
+    return auth.response;
+  }
 
   const existing = await env.DB.prepare(`
     SELECT
@@ -933,12 +925,8 @@ async function updateOwnerNode(request, env, token) {
     WHERE owner_token_hash = ?
     LIMIT 1
   `)
-    .bind(tokenHash)
+    .bind(auth.tokenHash)
     .first();
-
-  if (!existing) {
-    return new Response("Owner token invalid", { status: 404 });
-  }
 
   let body;
 
@@ -1197,15 +1185,17 @@ async function insertNodeEvent(env, { nodeId, eventType, actorType, actorRef, pa
     .run();
 }
 
-async function getOwnerAuthState(request, env, token) {
+async function getOwnerAuthRecord(env, token) {
   if (!token) {
-    return new Response("Owner token invalid", { status: 404 });
+    return null;
   }
 
   const tokenHash = await sha256(token);
 
   const node = await env.DB.prepare(`
     SELECT
+      id,
+      owner_token_hash,
       owner_pin_hash,
       owner_lockout_until
     FROM nodes
@@ -1216,36 +1206,170 @@ async function getOwnerAuthState(request, env, token) {
     .first();
 
   if (!node) {
-    return new Response("Owner token invalid", { status: 404 });
+    return null;
   }
 
-  if (node.owner_lockout_until) {
-    const lockTime = new Date(node.owner_lockout_until).getTime();
+  return {
+    id: node.id,
+    tokenHash,
+    ownerTokenHash: node.owner_token_hash,
+    ownerPinHash: node.owner_pin_hash,
+    ownerLockoutUntil: node.owner_lockout_until
+  };
+}
 
-    if (Date.now() < lockTime) {
-      return Response.json({
-        state: "locked"
-      });
+async function getOwnerAuthStatus(request, env, token) {
+  const auth = await getOwnerAuthRecord(env, token);
+
+  if (!auth) {
+    return {
+      state: "invalid_token"
+    };
+  }
+
+  if (auth.ownerLockoutUntil) {
+    const lockTime = new Date(auth.ownerLockoutUntil).getTime();
+
+    if (Number.isFinite(lockTime) && Date.now() < lockTime) {
+      return {
+        state: "locked",
+        auth
+      };
     }
   }
 
-  if (!node.owner_pin_hash) {
+  if (!auth.ownerPinHash) {
+    return {
+      state: "pin_not_set",
+      auth
+    };
+  }
+
+  if (!env.OWNER_SESSION_SECRET) {
+    return {
+      state: "pin_required",
+      auth
+    };
+  }
+
+  const cookieValue = getCookieValue(request.headers.get("cookie"), OWNER_SESSION_COOKIE_NAME);
+  const hasValidSession = await verifyOwnerSession(cookieValue, auth.id, auth.tokenHash, env);
+
+  return {
+    state: hasValidSession ? "session_valid" : "pin_required",
+    auth
+  };
+}
+
+async function requireAuthorizedOwner(request, env, token) {
+  const status = await getOwnerAuthStatus(request, env, token);
+
+  if (status.state === "invalid_token") {
+    return {
+      response: new Response("Owner token invalid", { status: 404 })
+    };
+  }
+
+  if (status.state === "locked") {
+    return {
+      response: Response.json({
+        state: "locked"
+      }, { status: 403 })
+    };
+  }
+
+  if (status.state === "pin_required") {
+    return {
+      response: Response.json({
+        state: "pin_required"
+      }, { status: 401 })
+    };
+  }
+
+  return {
+    auth: status.auth,
+    tokenHash: status.auth.tokenHash,
+    nodeId: status.auth.id
+  };
+}
+
+async function getOwnerAuthState(request, env, token) {
+  const status = await getOwnerAuthStatus(request, env, token);
+
+  if (status.state === "invalid_token") {
+    return new Response("Owner token invalid", { status: 404 });
+  }
+
+  return Response.json({
+    state: status.state
+  });
+}
+
+async function postOwnerAuthState(request, env, token) {
+  const status = await getOwnerAuthStatus(request, env, token);
+
+  if (status.state === "invalid_token") {
+    return new Response("Owner token invalid", { status: 404 });
+  }
+
+  if (status.state === "locked") {
+    return Response.json({
+      state: "locked"
+    }, { status: 403 });
+  }
+
+  if (status.state === "pin_not_set") {
     return Response.json({
       state: "pin_not_set"
     });
   }
 
-  const cookie = request.headers.get("cookie") || "";
-  const hasSession = cookie.includes("owner_session=");
-
-  if (hasSession) {
+  if (status.state === "session_valid") {
     return Response.json({
       state: "session_valid"
     });
   }
 
-  return Response.json({
-    state: "pin_required"
+  if (!env.OWNER_SESSION_SECRET) {
+    return Response.json({
+      state: "pin_required"
+    }, { status: 401 });
+  }
+
+  let body;
+
+  try {
+    body = await request.json();
+  } catch {
+    return new Response("Invalid JSON", { status: 400 });
+  }
+
+  const pin = sanitizeRequiredString(body?.pin, 64);
+
+  if (!pin) {
+    return Response.json({
+      state: "invalid_pin"
+    }, { status: 401 });
+  }
+
+  const isValidPin = await verifyOwnerPin(pin, status.auth.ownerPinHash);
+
+  if (!isValidPin) {
+    return Response.json({
+      state: "invalid_pin"
+    }, { status: 401 });
+  }
+
+  const setCookie = await createOwnerSessionCookie(status.auth.id, status.auth.tokenHash, env);
+
+  return new Response(JSON.stringify({
+    state: "session_valid"
+  }), {
+    status: 200,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "set-cookie": setCookie
+    }
   });
 }
 
@@ -1401,6 +1525,107 @@ function generateIdentifier() {
   return `ID#${id}`;
 }
 
+async function createOwnerSessionCookie(nodeId, tokenHash, env) {
+  const exp = Math.floor(Date.now() / 1000) + OWNER_SESSION_MAX_AGE_SECONDS;
+  const payload = JSON.stringify({
+    node_id: nodeId,
+    token_hash: tokenHash,
+    exp
+  });
+  const encodedPayload = base64UrlEncodeString(payload);
+  const signature = await signOwnerSessionPayload(encodedPayload, env.OWNER_SESSION_SECRET);
+
+  return [
+    `${OWNER_SESSION_COOKIE_NAME}=${encodedPayload}.${signature}`,
+    `Max-Age=${OWNER_SESSION_MAX_AGE_SECONDS}`,
+    "Path=/",
+    "HttpOnly",
+    "Secure",
+    "SameSite=Lax"
+  ].join("; ");
+}
+
+async function verifyOwnerSession(cookieValue, nodeId, tokenHash, env) {
+  if (!cookieValue || !env.OWNER_SESSION_SECRET) {
+    return false;
+  }
+
+  const parts = cookieValue.split(".");
+
+  if (parts.length !== 2) {
+    return false;
+  }
+
+  const [encodedPayload, providedSignature] = parts;
+  const expectedSignature = await signOwnerSessionPayload(encodedPayload, env.OWNER_SESSION_SECRET);
+
+  if (!timingSafeEqual(providedSignature, expectedSignature)) {
+    return false;
+  }
+
+  const payloadText = base64UrlDecodeToString(encodedPayload);
+
+  if (!payloadText) {
+    return false;
+  }
+
+  let payload;
+
+  try {
+    payload = JSON.parse(payloadText);
+  } catch {
+    return false;
+  }
+
+  if (!payload || typeof payload !== "object") {
+    return false;
+  }
+
+  if (payload.node_id !== nodeId) {
+    return false;
+  }
+
+  if (payload.token_hash !== tokenHash) {
+    return false;
+  }
+
+  if (!Number.isFinite(payload.exp)) {
+    return false;
+  }
+
+  return Math.floor(Date.now() / 1000) < payload.exp;
+}
+
+async function signOwnerSessionPayload(encodedPayload, secret) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    {
+      name: "HMAC",
+      hash: "SHA-256"
+    },
+    false,
+    ["sign"]
+  );
+
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(encodedPayload)
+  );
+
+  return bytesToBase64Url(new Uint8Array(signature));
+}
+
+async function verifyOwnerPin(pin, ownerPinHash) {
+  if (!pin || !ownerPinHash) {
+    return false;
+  }
+
+  const pinHash = await sha256(pin);
+  return timingSafeEqual(pinHash, String(ownerPinHash).trim().toLowerCase());
+}
+
 async function sha256(text) {
   const encoder = new TextEncoder();
   const data = encoder.encode(text);
@@ -1408,6 +1633,64 @@ async function sha256(text) {
   const bytes = Array.from(new Uint8Array(hash));
 
   return bytes.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function getCookieValue(cookieHeader, name) {
+  if (!cookieHeader || !name) {
+    return null;
+  }
+
+  const cookies = cookieHeader.split(";");
+
+  for (const part of cookies) {
+    const [rawName, ...rawValueParts] = part.trim().split("=");
+
+    if (rawName === name) {
+      return rawValueParts.join("=") || null;
+    }
+  }
+
+  return null;
+}
+
+function base64UrlEncodeString(value) {
+  const bytes = new TextEncoder().encode(value);
+  return bytesToBase64Url(bytes);
+}
+
+function base64UrlDecodeToString(value) {
+  if (!value || typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value
+    .replaceAll("-", "+")
+    .replaceAll("_", "/");
+  const padding = normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
+
+  try {
+    return atob(normalized + padding);
+  } catch {
+    return null;
+  }
+}
+
+function timingSafeEqual(a, b) {
+  if (typeof a !== "string" || typeof b !== "string") {
+    return false;
+  }
+
+  if (a.length !== b.length) {
+    return false;
+  }
+
+  let mismatch = 0;
+
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+
+  return mismatch === 0;
 }
 
 function sanitizeStatus(value, fallback) {
