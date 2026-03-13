@@ -54,6 +54,15 @@ export default {
     if (
       request.method === "POST" &&
       path.startsWith("/api/owner/") &&
+      path.endsWith("/verify-pin")
+    ) {
+      const token = getOwnerRouteToken(path);
+      return postOwnerVerifyPin(request, env, token);
+    }
+
+    if (
+      request.method === "POST" &&
+      path.startsWith("/api/owner/") &&
       path.endsWith("/auth-state")
     ) {
       const token = getOwnerRouteToken(path);
@@ -134,6 +143,8 @@ export default {
 
 const OWNER_SESSION_COOKIE_NAME = "owner_session";
 const OWNER_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24;
+const OWNER_PIN_MAX_ATTEMPTS = 5;
+const OWNER_PIN_LOCKOUT_SECONDS = 15 * 60;
 
 async function servePublicPage(request, env) {
   return fetchInternalHtmlAsset(request, env, "/public.html");
@@ -1206,6 +1217,7 @@ async function getOwnerAuthRecord(env, token) {
       id,
       owner_token_hash,
       owner_pin_hash,
+      owner_failed_pin_attempts,
       owner_lockout_until
     FROM nodes
     WHERE owner_token_hash = ?
@@ -1223,6 +1235,7 @@ async function getOwnerAuthRecord(env, token) {
     tokenHash,
     ownerTokenHash: node.owner_token_hash,
     ownerPinHash: node.owner_pin_hash,
+    ownerFailedPinAttempts: Number(node.owner_failed_pin_attempts || 0),
     ownerLockoutUntil: node.owner_lockout_until
   };
 }
@@ -1315,6 +1328,14 @@ async function getOwnerAuthState(request, env, token) {
 }
 
 async function postOwnerAuthState(request, env, token) {
+  return verifyOwnerPinAndIssueSession(request, env, token);
+}
+
+async function postOwnerVerifyPin(request, env, token) {
+  return verifyOwnerPinAndIssueSession(request, env, token);
+}
+
+async function verifyOwnerPinAndIssueSession(request, env, token) {
   const status = await getOwnerAuthStatus(request, env, token);
 
   if (status.state === "invalid_token") {
@@ -1356,6 +1377,14 @@ async function postOwnerAuthState(request, env, token) {
   const pin = sanitizeRequiredString(body?.pin, 64);
 
   if (!pin) {
+    const failedAttempt = await registerFailedOwnerPinAttempt(env, status.auth);
+
+    if (failedAttempt.locked) {
+      return Response.json({
+        state: "locked"
+      }, { status: 403 });
+    }
+
     return Response.json({
       state: "invalid_pin"
     }, { status: 401 });
@@ -1364,10 +1393,20 @@ async function postOwnerAuthState(request, env, token) {
   const isValidPin = await verifyOwnerPin(pin, status.auth.ownerPinHash);
 
   if (!isValidPin) {
+    const failedAttempt = await registerFailedOwnerPinAttempt(env, status.auth);
+
+    if (failedAttempt.locked) {
+      return Response.json({
+        state: "locked"
+      }, { status: 403 });
+    }
+
     return Response.json({
       state: "invalid_pin"
     }, { status: 401 });
   }
+
+  await clearOwnerPinFailures(env, status.auth.id);
 
   const setCookie = await createOwnerSessionCookie(status.auth.id, status.auth.tokenHash, env);
 
@@ -1429,6 +1468,47 @@ async function setOwnerPin(request, env, token) {
   return Response.json({
     state: "pin_required"
   });
+}
+
+async function registerFailedOwnerPinAttempt(env, auth) {
+  const nextAttempts = Number(auth.ownerFailedPinAttempts || 0) + 1;
+  const shouldLock = nextAttempts >= OWNER_PIN_MAX_ATTEMPTS;
+  const now = new Date().toISOString();
+  const lockoutUntil = shouldLock
+    ? new Date(Date.now() + OWNER_PIN_LOCKOUT_SECONDS * 1000).toISOString()
+    : null;
+
+  await env.DB.prepare(`
+    UPDATE nodes
+    SET
+      owner_failed_pin_attempts = ?,
+      owner_lockout_until = ?,
+      updated_at = ?
+    WHERE id = ?
+  `)
+    .bind(nextAttempts, lockoutUntil, now, auth.id)
+    .run();
+
+  return {
+    attempts: nextAttempts,
+    locked: shouldLock,
+    lockoutUntil
+  };
+}
+
+async function clearOwnerPinFailures(env, nodeId) {
+  const now = new Date().toISOString();
+
+  await env.DB.prepare(`
+    UPDATE nodes
+    SET
+      owner_failed_pin_attempts = 0,
+      owner_lockout_until = NULL,
+      updated_at = ?
+    WHERE id = ?
+  `)
+    .bind(now, nodeId)
+    .run();
 }
 
 function getOwnerRouteToken(path) {
