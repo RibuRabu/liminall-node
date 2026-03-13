@@ -45,6 +45,15 @@ export default {
     if (
       request.method === "POST" &&
       path.startsWith("/api/owner/") &&
+      path.endsWith("/set-pin")
+    ) {
+      const token = getOwnerRouteToken(path);
+      return setOwnerPin(request, env, token);
+    }
+
+    if (
+      request.method === "POST" &&
+      path.startsWith("/api/owner/") &&
       path.endsWith("/auth-state")
     ) {
       const token = getOwnerRouteToken(path);
@@ -1370,6 +1379,55 @@ async function postOwnerAuthState(request, env, token) {
       "content-type": "application/json; charset=utf-8",
       "set-cookie": setCookie
     }
+  });
+}
+
+async function setOwnerPin(request, env, token) {
+  const auth = await requireAuthorizedOwner(request, env, token);
+
+  if (auth.response) {
+    return auth.response;
+  }
+
+  let body;
+
+  try {
+    body = await request.json();
+  } catch {
+    return new Response("Invalid JSON", { status: 400 });
+  }
+
+  const pin = typeof body?.pin === "string" ? body.pin.trim() : "";
+
+  if (!/^\d{4,6}$/.test(pin)) {
+    return Response.json({
+      error: "invalid_pin_format"
+    }, { status: 400 });
+  }
+
+  const pinHash = await sha256(pin);
+  const now = new Date().toISOString();
+
+  await env.DB.prepare(`
+    UPDATE nodes
+    SET
+      owner_pin_hash = ?,
+      owner_pin_set_at = ?,
+      owner_failed_pin_attempts = 0,
+      owner_lockout_until = NULL,
+      updated_at = ?
+    WHERE id = ?
+  `)
+    .bind(
+      pinHash,
+      now,
+      now,
+      auth.nodeId
+    )
+    .run();
+
+  return Response.json({
+    state: "pin_required"
   });
 }
 
