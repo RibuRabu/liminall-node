@@ -76,6 +76,20 @@ export default {
 
     if (
       request.method === "GET" &&
+      path === "/api/owner/auth-state"
+    ) {
+      return getOwnerSessionAuthState(request, env);
+    }
+
+    if (
+      request.method === "GET" &&
+      path === "/api/owner"
+    ) {
+      return getOwnerNodeFromSession(request, env);
+    }
+
+    if (
+      request.method === "GET" &&
       path.startsWith("/api/owner/") &&
       path.endsWith("/auth-state")
     ) {
@@ -1317,6 +1331,118 @@ async function getOwnerAuthStatus(request, env, token) {
     state: hasValidSession ? "session_valid" : "pin_required",
     auth
   };
+}
+
+async function getOwnerSessionRecord(request, env) {
+  if (!env.OWNER_SESSION_SECRET) {
+    return null;
+  }
+
+  const cookieValue = getCookieValue(request.headers.get("cookie"), OWNER_SESSION_COOKIE_NAME);
+
+  if (!cookieValue) {
+    return null;
+  }
+
+  const parts = cookieValue.split(".");
+
+  if (parts.length !== 2) {
+    return null;
+  }
+
+  const payloadText = base64UrlDecodeToString(parts[0]);
+
+  if (!payloadText) {
+    return null;
+  }
+
+  let payload;
+
+  try {
+    payload = JSON.parse(payloadText);
+  } catch {
+    return null;
+  }
+
+  if (!payload || typeof payload !== "object" || !payload.node_id) {
+    return null;
+  }
+
+  const node = await env.DB.prepare(`
+    SELECT
+      id,
+      owner_token_hash,
+      node_type,
+      status,
+      public_slug,
+      public_identifier,
+      profile_name,
+      profile_image_url,
+      public_message,
+      phone,
+      sms,
+      email,
+      whatsapp,
+      preferred_contact,
+      last_recovery_lat,
+      last_recovery_lng,
+      last_recovery_label,
+      show_profile_name,
+      show_profile_image,
+      show_identifier,
+      show_message,
+      show_phone,
+      show_sms,
+      show_email,
+      show_whatsapp,
+      show_last_recovery_point,
+      allow_anonymous_report,
+      created_at,
+      updated_at
+    FROM nodes
+    WHERE id = ?
+    LIMIT 1
+  `)
+    .bind(payload.node_id)
+    .first();
+
+  if (!node) {
+    return null;
+  }
+
+  const hasValidSession = await verifyOwnerSession(cookieValue, node.id, node.owner_token_hash, env);
+
+  if (!hasValidSession) {
+    return null;
+  }
+
+  return node;
+}
+
+async function getOwnerSessionAuthState(request, env) {
+  const node = await getOwnerSessionRecord(request, env);
+
+  if (!node) {
+    return Response.json({
+      state: "pin_required"
+    }, { status: 401 });
+  }
+
+  return Response.json({
+    state: "session_valid"
+  });
+}
+
+async function getOwnerNodeFromSession(request, env) {
+  const node = await getOwnerSessionRecord(request, env);
+
+  if (!node) {
+    return Response.json({
+      state: "pin_required"
+    }, { status: 401 });
+  }
+
+  return Response.json(node);
 }
 
 async function requireAuthorizedOwner(request, env, token) {

@@ -93,6 +93,10 @@ const i18n = {
 
     empty_timeline: "Ei tapahtumia vielä.",
     missing_token: "Owner-token puuttuu",
+    pin_prompt: "Syötä PIN",
+    pin_required: "PIN vaaditaan.",
+    pin_verify_failed: "PIN-vahvistus epäonnistui",
+    session_check_failed: "Istunnon tarkistus epäonnistui",
     load_owner_failed: "Node-datan lataus epäonnistui",
     load_timeline_failed: "Tapahtumahistorian lataus epäonnistui",
     save_success: "Tallennus onnistui.",
@@ -207,6 +211,10 @@ const i18n = {
 
     empty_timeline: "No events yet.",
     missing_token: "Missing owner token",
+    pin_prompt: "Enter PIN",
+    pin_required: "PIN required.",
+    pin_verify_failed: "PIN verification failed",
+    session_check_failed: "Session check failed",
     load_owner_failed: "Failed to load owner node",
     load_timeline_failed: "Failed to load timeline",
     save_success: "Saved successfully.",
@@ -233,21 +241,14 @@ const i18n = {
 };
 
 let currentLang = "fi";
-let token = null;
+let bootstrapToken = null;
 let currentNode = null;
 let currentEvents = [];
 let selectedImageFile = null;
 let selectedImagePreviewUrl = null;
 let imageOperationInFlight = false;
 
-function getToken() {
-  const params = new URLSearchParams(window.location.search);
-  const tokenFromQuery = params.get("token");
-
-  if (tokenFromQuery && tokenFromQuery.trim() !== "") {
-    return tokenFromQuery.trim();
-  }
-
+function getBootstrapToken() {
   const path = window.location.pathname.replace(/\/+$/, "");
   const parts = path.split("/");
 
@@ -688,7 +689,7 @@ function renderTimeline() {
 }
 
 async function fetchOwnerNode() {
-  const res = await fetch(`/api/owner/${token}`);
+  const res = await fetch("/api/owner");
 
   if (!res.ok) {
     throw new Error(t("load_owner_failed"));
@@ -698,7 +699,12 @@ async function fetchOwnerNode() {
 }
 
 async function fetchTimeline() {
-  const res = await fetch(`/api/owner/${token}/events`);
+  if (!bootstrapToken) {
+    currentEvents = [];
+    return;
+  }
+
+  const res = await fetch(`/api/owner/${bootstrapToken}/events`);
 
   if (!res.ok) {
     throw new Error(t("load_timeline_failed"));
@@ -728,7 +734,7 @@ function clearActionStatus() {
 }
 
 async function postOwnerUpdate(payload) {
-  const res = await fetch(`/api/owner/${token}`, {
+  const res = await fetch(`/api/owner/${bootstrapToken}`, {
     method: "POST",
     headers: {
       "content-type": "application/json"
@@ -814,7 +820,7 @@ async function handleSaveNodeImage() {
     const formData = new FormData();
     formData.append("image", selectedImageFile);
 
-    const res = await fetch(`/api/owner/${token}/image`, {
+    const res = await fetch(`/api/owner/${bootstrapToken}/image`, {
       method: "POST",
       body: formData
     });
@@ -851,7 +857,7 @@ async function handleRemoveNodeImage() {
   setActionStatus(t("image_deleting"), "success");
 
   try {
-    const res = await fetch(`/api/owner/${token}/image`, {
+    const res = await fetch(`/api/owner/${bootstrapToken}/image`, {
       method: "DELETE"
     });
 
@@ -972,7 +978,7 @@ async function handleReplaceCarrier() {
   const notes = document.getElementById("carrierNotes").value;
 
   try {
-    const res = await fetch(`/api/owner/${token}/carrier`, {
+    const res = await fetch(`/api/owner/${bootstrapToken}/carrier`, {
       method: "POST",
       headers: {
         "content-type": "application/json"
@@ -1019,21 +1025,79 @@ function bindEvents() {
   document.getElementById("emailInput").addEventListener("input", syncPreferredContactUI);
 }
 
+async function fetchOwnerAuthState() {
+  const res = await fetch("/api/owner/auth-state");
+
+  if (res.status === 401) {
+    return { state: "pin_required" };
+  }
+
+  if (!res.ok) {
+    throw new Error(t("session_check_failed"));
+  }
+
+  return res.json();
+}
+
+async function verifyBootstrapPin(pin) {
+  if (!bootstrapToken) {
+    throw new Error(t("missing_token"));
+  }
+
+  const res = await fetch(`/api/owner/${bootstrapToken}/verify-pin`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({ pin })
+  });
+
+  const data = await res.json().catch(() => null);
+
+  if (!res.ok || !data || data.state !== "session_valid") {
+    throw new Error(t("pin_verify_failed"));
+  }
+}
+
+async function handlePinRequired() {
+  if (!bootstrapToken) {
+    document.body.innerHTML = `<p class="error">${escapeHtml(t("pin_required"))}</p>`;
+    return;
+  }
+
+  const pin = window.prompt(t("pin_prompt"));
+
+  if (!pin) {
+    document.body.innerHTML = `<p class="error">${escapeHtml(t("pin_required"))}</p>`;
+    return;
+  }
+
+  await verifyBootstrapPin(pin);
+  await refreshAll();
+}
+
 async function init() {
-  token = getToken();
+  bootstrapToken = getBootstrapToken();
   currentLang = getLanguage();
 
   renderStaticTexts();
   updateLanguageButtons();
   bindEvents();
 
-  if (!token) {
-    document.body.innerHTML = `<p class="error">${escapeHtml(t("missing_token"))}</p>`;
-    return;
-  }
-
   try {
-    await refreshAll();
+    const authState = await fetchOwnerAuthState();
+
+    if (authState.state === "session_valid") {
+      await refreshAll();
+      return;
+    }
+
+    if (authState.state === "pin_required") {
+      await handlePinRequired();
+      return;
+    }
+
+    document.body.innerHTML = `<p class="error">${escapeHtml(t("session_check_failed"))}</p>`;
   } catch (error) {
     document.body.innerHTML = `<p class="error">${escapeHtml(error.message)}</p>`;
   }
