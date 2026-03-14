@@ -1596,6 +1596,15 @@ async function changeOwnerPin(request, env) {
     )
     .run();
 
+  await insertNodeEvent(env, {
+    nodeId: sessionNode.id,
+    eventType: "pin_changed",
+    actorType: "owner",
+    actorRef: null,
+    payload: null,
+    createdAt: now
+  });
+
   const setCookie = await createOwnerSessionCookie(
     sessionNode.id,
     sessionNode.owner_token_hash,
