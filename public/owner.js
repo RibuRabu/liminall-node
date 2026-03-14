@@ -53,6 +53,16 @@ const i18n = {
     carrier_reason_label: "Syy",
     carrier_notes_label: "Lisähuomiot",
 
+    pin_section_title: "Vaihda PIN",
+    current_pin_label: "Nykyinen PIN",
+    new_pin_label: "Uusi PIN",
+    confirm_pin_label: "Vahvista uusi PIN",
+    change_pin_button: "Vaihda PIN",
+    change_pin_success: "PIN vaihdettu.",
+    change_pin_failed: "PINin vaihto epäonnistui",
+    change_pin_mismatch: "Uusi PIN ja vahvistus eivät täsmää.",
+    change_pin_invalid_format: "PINin on oltava 4-6 numeroa.",
+    change_pin_invalid_current: "Nykyinen PIN on virheellinen.",
     node_image_input_label: "Valitse kuva",
     node_image_hint: "Sallitut muodot: PNG, JPG, WEBP tai GIF. Maksimikoko 5 MB.",
     node_image_empty_title: "Ei kuvaa",
@@ -171,6 +181,16 @@ const i18n = {
     carrier_reason_label: "Reason",
     carrier_notes_label: "Notes",
 
+    pin_section_title: "Change PIN",
+    current_pin_label: "Current PIN",
+    new_pin_label: "New PIN",
+    confirm_pin_label: "Confirm new PIN",
+    change_pin_button: "Change PIN",
+    change_pin_success: "PIN changed.",
+    change_pin_failed: "Failed to change PIN",
+    change_pin_mismatch: "New PIN and confirmation do not match.",
+    change_pin_invalid_format: "PIN must be 4-6 digits.",
+    change_pin_invalid_current: "Current PIN is incorrect.",
     node_image_input_label: "Choose image",
     node_image_hint: "Allowed formats: PNG, JPG, WEBP, or GIF. Maximum size 5 MB.",
     node_image_empty_title: "No image",
@@ -527,6 +547,11 @@ function renderStaticTexts() {
   document.getElementById("carrierSectionTitle").textContent = t("carrier_section_title");
   document.getElementById("carrierReasonLabel").textContent = t("carrier_reason_label");
   document.getElementById("carrierNotesLabel").textContent = t("carrier_notes_label");
+  document.getElementById("pinSectionTitle").textContent = t("pin_section_title");
+  document.getElementById("currentPinLabel").textContent = t("current_pin_label");
+  document.getElementById("newPinLabel").textContent = t("new_pin_label");
+  document.getElementById("confirmPinLabel").textContent = t("confirm_pin_label");
+  document.getElementById("changePinButton").textContent = t("change_pin_button");
 
   document.getElementById("nodeImageInputLabel").textContent = t("node_image_input_label");
   document.getElementById("nodeImageHint").textContent = t("node_image_hint");
@@ -730,6 +755,18 @@ function setActionStatus(message, type) {
 function clearActionStatus() {
   const el = document.getElementById("actionStatus");
   el.className = "hero-notice";
+  el.textContent = "";
+}
+
+function setPinStatus(message, type) {
+  const el = document.getElementById("pinStatus");
+  el.className = type === "error" ? "small error" : "small";
+  el.textContent = message;
+}
+
+function clearPinStatus() {
+  const el = document.getElementById("pinStatus");
+  el.className = "muted small";
   el.textContent = "";
 }
 
@@ -1002,6 +1039,55 @@ async function handleReplaceCarrier() {
   }
 }
 
+async function handleChangePin() {
+  clearPinStatus();
+
+  const currentPin = document.getElementById("currentPinInput").value.trim();
+  const newPin = document.getElementById("newPinInput").value.trim();
+  const confirmPin = document.getElementById("confirmPinInput").value.trim();
+
+  if (!/^\d{4,6}$/.test(newPin)) {
+    setPinStatus(t("change_pin_invalid_format"), "error");
+    return;
+  }
+
+  if (newPin !== confirmPin) {
+    setPinStatus(t("change_pin_mismatch"), "error");
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/owner/change-pin", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({ currentPin, newPin })
+    });
+
+    const data = await res.json().catch(() => null);
+
+    if (!res.ok) {
+      if (res.status === 401 && data?.error === "invalid_current_pin") {
+        throw new Error(t("change_pin_invalid_current"));
+      }
+
+      if (res.status === 400 && data?.error === "invalid_pin_format") {
+        throw new Error(t("change_pin_invalid_format"));
+      }
+
+      throw new Error(t("change_pin_failed"));
+    }
+
+    document.getElementById("currentPinInput").value = "";
+    document.getElementById("newPinInput").value = "";
+    document.getElementById("confirmPinInput").value = "";
+    setPinStatus(t("change_pin_success"), "success");
+  } catch (error) {
+    setPinStatus(error.message || t("change_pin_failed"), "error");
+  }
+}
+
 function bindEvents() {
   document.getElementById("langFi").addEventListener("click", () => setLanguage("fi"));
   document.getElementById("langEn").addEventListener("click", () => setLanguage("en"));
@@ -1013,6 +1099,7 @@ function bindEvents() {
   document.getElementById("saveContactSettingsButton").addEventListener("click", handleSaveContactSettings);
   document.getElementById("saveLocationButton").addEventListener("click", handleSaveLocation);
   document.getElementById("replaceCarrierButton").addEventListener("click", handleReplaceCarrier);
+  document.getElementById("changePinButton").addEventListener("click", handleChangePin);
 
   document.getElementById("nodeImageInput").addEventListener("change", handleImageInputChange);
   document.getElementById("saveNodeImageButton").addEventListener("click", handleSaveNodeImage);

@@ -89,6 +89,20 @@ export default {
     }
 
     if (
+      request.method === "POST" &&
+      path === "/api/owner/logout"
+    ) {
+      return logoutOwnerSession();
+    }
+
+    if (
+      request.method === "POST" &&
+      path === "/api/owner/change-pin"
+    ) {
+      return changeOwnerPin(request, env);
+    }
+
+    if (
       request.method === "GET" &&
       path.startsWith("/api/owner/") &&
       path.endsWith("/auth-state")
@@ -1438,6 +1452,91 @@ async function getOwnerNodeFromSession(request, env) {
   return Response.json(node);
 }
 
+async function logoutOwnerSession() {
+  return new Response(JSON.stringify({
+    ok: true
+  }), {
+    status: 200,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "set-cookie": [
+        `${OWNER_SESSION_COOKIE_NAME}=`,
+        "Max-Age=0",
+        "Path=/",
+        "HttpOnly",
+        "Secure",
+        "SameSite=Lax"
+      ].join("; ")
+    }
+  });
+}
+
+async function changeOwnerPin(request, env) {
+  const sessionNode = await getOwnerSessionRecord(request, env);
+
+  if (!sessionNode) {
+    return Response.json({
+      state: "pin_required"
+    }, { status: 401 });
+  }
+
+  let body;
+
+  try {
+    body = await request.json();
+  } catch {
+    return new Response("Invalid JSON", { status: 400 });
+  }
+
+  const currentPin = typeof body?.currentPin === "string" ? body.currentPin.trim() : "";
+  const newPin = typeof body?.newPin === "string" ? body.newPin.trim() : "";
+
+  if (!/^\d{4,6}$/.test(newPin)) {
+    return Response.json({
+      error: "invalid_pin_format"
+    }, { status: 400 });
+  }
+
+  const pinRow = await env.DB.prepare(`
+    SELECT
+      owner_pin_hash
+    FROM nodes
+    WHERE id = ?
+    LIMIT 1
+  `)
+    .bind(sessionNode.id)
+    .first();
+
+  const isValidCurrentPin = await verifyOwnerPin(currentPin, pinRow?.owner_pin_hash);
+
+  if (!isValidCurrentPin) {
+    return Response.json({
+      error: "invalid_current_pin"
+    }, { status: 401 });
+  }
+
+  const pinHash = await sha256(newPin);
+  const now = new Date().toISOString();
+
+  await env.DB.prepare(`
+    UPDATE nodes
+    SET
+      owner_pin_hash = ?,
+      updated_at = ?
+    WHERE id = ?
+  `)
+    .bind(
+      pinHash,
+      now,
+      sessionNode.id
+    )
+    .run();
+
+  return Response.json({
+    ok: true
+  });
+}
+
 async function requireAuthorizedOwner(request, env, token) {
   const status = await getOwnerAuthStatus(request, env, token);
 
@@ -1452,6 +1551,14 @@ async function requireAuthorizedOwner(request, env, token) {
       response: Response.json({
         state: "locked"
       }, { status: 403 })
+    };
+  }
+
+  if (status.state === "pin_not_set") {
+    return {
+      response: Response.json({
+        state: "pin_not_set"
+      }, { status: 401 })
     };
   }
 
@@ -1577,10 +1684,22 @@ async function verifyOwnerPinAndIssueSession(request, env, token) {
 }
 
 async function setOwnerPin(request, env, token) {
-  const auth = await requireAuthorizedOwner(request, env, token);
+  const status = await getOwnerAuthStatus(request, env, token);
 
-  if (auth.response) {
-    return auth.response;
+  if (status.state === "invalid_token") {
+    return new Response("Owner token invalid", { status: 404 });
+  }
+
+  if (status.state === "locked") {
+    return Response.json({
+      state: "locked"
+    }, { status: 403 });
+  }
+
+  if (status.state !== "pin_not_set" && status.state !== "session_valid") {
+    return Response.json({
+      state: "pin_required"
+    }, { status: 401 });
   }
 
   let body;
@@ -1616,7 +1735,7 @@ async function setOwnerPin(request, env, token) {
       pinHash,
       now,
       now,
-      auth.nodeId
+      status.auth.id
     )
     .run();
 
