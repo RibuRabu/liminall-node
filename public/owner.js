@@ -1026,6 +1026,16 @@ function bindEvents() {
 }
 
 async function fetchOwnerAuthState() {
+  if (bootstrapToken) {
+    const res = await fetch(`/api/owner/${bootstrapToken}/auth-state`);
+
+    if (!res.ok) {
+      throw new Error(t("session_check_failed"));
+    }
+
+    return res.json();
+  }
+
   const res = await fetch("/api/owner/auth-state");
 
   if (res.status === 401) {
@@ -1059,7 +1069,33 @@ async function verifyBootstrapPin(pin) {
   }
 }
 
-async function handlePinRequired() {
+async function setupBootstrapPin(pin) {
+  if (!bootstrapToken) {
+    throw new Error(t("missing_token"));
+  }
+
+  const res = await fetch(`/api/owner/${bootstrapToken}/set-pin`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({ pin })
+  });
+
+  const data = await res.json().catch(() => null);
+
+  if (!res.ok || !data) {
+    throw new Error(t("pin_verify_failed"));
+  }
+}
+
+function redirectToOwnerDashboard() {
+  const url = new URL("/owner", window.location.origin);
+  url.searchParams.set("lang", currentLang);
+  window.location.replace(url.toString());
+}
+
+async function handlePinRequired(state) {
   if (!bootstrapToken) {
     document.body.innerHTML = `<p class="error">${escapeHtml(t("pin_required"))}</p>`;
     return;
@@ -1072,8 +1108,12 @@ async function handlePinRequired() {
     return;
   }
 
+  if (state === "pin_not_set") {
+    await setupBootstrapPin(pin);
+  }
+
   await verifyBootstrapPin(pin);
-  await refreshAll();
+  redirectToOwnerDashboard();
 }
 
 async function init() {
@@ -1092,8 +1132,8 @@ async function init() {
       return;
     }
 
-    if (authState.state === "pin_required") {
-      await handlePinRequired();
+    if (authState.state === "pin_not_set" || authState.state === "pin_required") {
+      await handlePinRequired(authState.state);
       return;
     }
 

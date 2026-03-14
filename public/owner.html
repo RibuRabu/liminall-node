@@ -238,66 +238,6 @@
     </div>
   </div>
 
-  <script>
-    (async () => {
-      const SESSION_TOKEN = "__session__";
-      const originalFetch = window.fetch.bind(window);
-
-      window.fetch = async (input, init) => {
-        const request = input instanceof Request ? input : null;
-        const method = (init && init.method ? init.method : (request ? request.method : "GET")).toUpperCase();
-        const url = new URL(request ? request.url : String(input), window.location.origin);
-
-        if (url.origin === window.location.origin && method === "GET") {
-          if (url.pathname === `/api/owner/${SESSION_TOKEN}/auth-state`) {
-            return originalFetch("/api/owner/auth-state", init);
-          }
-
-          if (url.pathname === `/api/owner/${SESSION_TOKEN}`) {
-            return originalFetch("/api/owner", init);
-          }
-
-          if (url.pathname === `/api/owner/${SESSION_TOKEN}/events`) {
-            return new Response(JSON.stringify({ events: [] }), {
-              status: 200,
-              headers: {
-                "content-type": "application/json; charset=utf-8"
-              }
-            });
-          }
-        }
-
-        return originalFetch(input, init);
-      };
-
-      try {
-        const authResponse = await originalFetch("/api/owner/auth-state");
-        const authState = authResponse.ok ? await authResponse.json() : { state: "pin_required" };
-
-        if (authState.state === "session_valid") {
-          const url = new URL(window.location.href);
-          url.searchParams.set("token", SESSION_TOKEN);
-          window.history.replaceState({}, "", url.toString());
-
-          const script = document.createElement("script");
-          script.src = "/owner.js";
-          document.body.appendChild(script);
-          return;
-        }
-
-        const status = document.getElementById("actionStatus");
-        if (status) {
-          status.className = "hero-notice error";
-          status.textContent = "PIN required";
-        }
-      } catch {
-        const status = document.getElementById("actionStatus");
-        if (status) {
-          status.className = "hero-notice error";
-          status.textContent = "Owner session check failed";
-        }
-      }
-    })();
-  </script>
+  <script src="/owner.js"></script>
 </body>
 </html>

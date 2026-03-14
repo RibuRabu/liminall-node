@@ -182,14 +182,7 @@ async function serveOwnerBootstrapPage(request, env, token) {
   }
 
   if (status.state === "pin_not_set") {
-    const setCookie = await createOwnerSessionCookie(status.auth.id, status.auth.tokenHash, env);
-    return new Response(null, {
-      status: 302,
-      headers: {
-        location: "/owner",
-        "set-cookie": setCookie
-      }
-    });
+    return serveOwnerPage(request, env);
   }
 
   if (status.state === "session_valid") {
