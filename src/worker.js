@@ -89,6 +89,13 @@ export default {
     }
 
     if (
+      request.method === "GET" &&
+      path === "/api/owner/events"
+    ) {
+      return getOwnerNodeEventsFromSession(request, env);
+    }
+
+    if (
       request.method === "POST" &&
       path === "/api/owner"
     ) {
@@ -644,6 +651,22 @@ async function getOwnerNodeEvents(request, env, token) {
     .bind(auth.tokenHash)
     .first();
 
+  return getOwnerEventsResponse(env, node);
+}
+
+async function getOwnerNodeEventsFromSession(request, env) {
+  const node = await getOwnerSessionRecord(request, env);
+
+  if (!node) {
+    return Response.json({
+      state: "pin_required"
+    }, { status: 401 });
+  }
+
+  return getOwnerEventsResponse(env, node);
+}
+
+async function getOwnerEventsResponse(env, node) {
   const rows = await env.DB.prepare(`
     SELECT
       id,

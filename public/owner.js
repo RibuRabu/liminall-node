@@ -736,12 +736,10 @@ async function fetchOwnerNode() {
 }
 
 async function fetchTimeline() {
-  if (!hasBootstrapToken()) {
-    currentEvents = [];
-    return;
-  }
-
-  const res = await fetch(`/api/owner/${bootstrapToken}/events`);
+  const endpoint = hasBootstrapToken()
+    ? `/api/owner/${bootstrapToken}/events`
+    : "/api/owner/events";
+  const res = await fetch(endpoint);
 
   if (!res.ok) {
     throw new Error(t("load_timeline_failed"));
