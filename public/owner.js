@@ -102,6 +102,9 @@ const i18n = {
     dashboard_status: "Yleistila",
 
     empty_timeline: "Ei tapahtumia vielä.",
+    timeline_show_all: "Näytä kaikki lokit",
+    timeline_hide_all: "Piilota lokit",
+    timeline_filter_all: "Kaikki",
     missing_token: "Owner-token puuttuu",
     pin_prompt: "Syötä PIN",
     pin_required: "PIN vaaditaan.",
@@ -230,6 +233,9 @@ const i18n = {
     dashboard_status: "Overview",
 
     empty_timeline: "No events yet.",
+    timeline_show_all: "Show all logs",
+    timeline_hide_all: "Hide logs",
+    timeline_filter_all: "All",
     missing_token: "Missing owner token",
     pin_prompt: "Enter PIN",
     pin_required: "PIN required.",
@@ -264,6 +270,8 @@ let currentLang = "fi";
 let bootstrapToken = null;
 let currentNode = null;
 let currentEvents = [];
+let timelineExpanded = false;
+let selectedTimelineMonth = "all";
 let selectedImageFile = null;
 let selectedImagePreviewUrl = null;
 let imageOperationInFlight = false;
@@ -424,6 +432,48 @@ function formatPreferredContact(value) {
 
 function translateEventType(type) {
   return t(`event_${type}`) || type;
+}
+
+function getTimelineMonthKey(value) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "unknown";
+  }
+
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function formatTimelineMonthLabel(monthKey) {
+  if (monthKey === "unknown") {
+    return monthKey;
+  }
+
+  const [year, month] = monthKey.split("-").map(Number);
+  const date = new Date(year, (month || 1) - 1, 1);
+
+  return date.toLocaleDateString(currentLang === "fi" ? "fi-FI" : "en-US", {
+    month: "long",
+    year: "numeric"
+  });
+}
+
+function getTimelineMonthOptions() {
+  const months = [];
+  const seen = new Set();
+
+  for (const event of currentEvents) {
+    const monthKey = getTimelineMonthKey(event.created_at);
+
+    if (seen.has(monthKey)) {
+      continue;
+    }
+
+    seen.add(monthKey);
+    months.push(monthKey);
+  }
+
+  return months;
 }
 
 function updatePublicPageButton() {
@@ -707,7 +757,67 @@ function renderTimeline() {
     return;
   }
 
-  for (const event of currentEvents) {
+  const monthOptions = getTimelineMonthOptions();
+
+  if (selectedTimelineMonth !== "all" && !monthOptions.includes(selectedTimelineMonth)) {
+    selectedTimelineMonth = "all";
+  }
+
+  const toggleButton = document.createElement("button");
+  toggleButton.type = "button";
+  toggleButton.className = "secondary-button";
+  toggleButton.textContent = timelineExpanded ? t("timeline_hide_all") : t("timeline_show_all");
+  toggleButton.addEventListener("click", () => {
+    timelineExpanded = !timelineExpanded;
+
+    if (!timelineExpanded) {
+      selectedTimelineMonth = "all";
+    }
+
+    renderTimeline();
+  });
+
+  if (timelineExpanded || currentEvents.length > 3) {
+    const controls = document.createElement("div");
+    controls.className = "button-row";
+
+    if (timelineExpanded) {
+      const monthSelect = document.createElement("select");
+
+      const allOption = document.createElement("option");
+      allOption.value = "all";
+      allOption.textContent = t("timeline_filter_all");
+      monthSelect.appendChild(allOption);
+
+      for (const monthKey of monthOptions) {
+        const option = document.createElement("option");
+        option.value = monthKey;
+        option.textContent = formatTimelineMonthLabel(monthKey);
+        monthSelect.appendChild(option);
+      }
+
+      monthSelect.value = selectedTimelineMonth;
+      monthSelect.addEventListener("change", (event) => {
+        selectedTimelineMonth = event.target.value || "all";
+        renderTimeline();
+      });
+      controls.appendChild(monthSelect);
+    }
+
+    if (!timelineExpanded && currentEvents.length <= 3) {
+      controls.style.display = "none";
+    }
+
+    controls.appendChild(toggleButton);
+    timeline.appendChild(controls);
+  }
+
+  const visibleEvents = currentEvents.filter((event) => (
+    selectedTimelineMonth === "all" || getTimelineMonthKey(event.created_at) === selectedTimelineMonth
+  ));
+  const eventsToRender = timelineExpanded ? visibleEvents : visibleEvents.slice(0, 3);
+
+  for (const event of eventsToRender) {
     const wrapper = document.createElement("div");
     wrapper.className = "event";
 
