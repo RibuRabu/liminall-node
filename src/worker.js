@@ -1778,7 +1778,7 @@ async function setOwnerPin(request, env, token) {
     }, { status: 403 });
   }
 
-  if (status.state !== "pin_not_set" && status.state !== "session_valid") {
+  if (status.state !== "pin_not_set") {
     return Response.json({
       state: "pin_required"
     }, { status: 401 });
