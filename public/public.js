@@ -285,38 +285,18 @@ function renderStatus(node) {
 }
 
 function buildActions(node) {
-  const rawPhone = getTrimmedString(node.contact_phone || node.phone);
-  const rawSms = getTrimmedString(node.contact_sms || node.sms);
-  const rawWhatsapp = getTrimmedString(node.contact_whatsapp || node.whatsapp);
-  const rawEmail = getTrimmedString(node.contact_email || node.email);
+  const rawPhone = getTrimmedString(node.contact_phone);
+  const rawSms = getTrimmedString(node.contact_sms);
+  const rawWhatsapp = getTrimmedString(node.contact_whatsapp);
+  const rawEmail = getTrimmedString(node.contact_email);
 
   const normalizedPhone = normalizePhoneLike(rawPhone);
   const normalizedSms = normalizePhoneLike(rawSms);
   const normalizedWhatsapp = normalizeWhatsapp(rawWhatsapp);
 
-  const showPhone =
-    Object.prototype.hasOwnProperty.call(node, "show_phone")
-      ? isTruthy(node.show_phone)
-      : !!rawPhone;
-
-  const showSms =
-    Object.prototype.hasOwnProperty.call(node, "show_sms")
-      ? isTruthy(node.show_sms)
-      : !!rawSms;
-
-  const showWhatsapp =
-    Object.prototype.hasOwnProperty.call(node, "show_whatsapp")
-      ? isTruthy(node.show_whatsapp)
-      : !!rawWhatsapp;
-
-  const showEmail =
-    Object.prototype.hasOwnProperty.call(node, "show_email")
-      ? isTruthy(node.show_email)
-      : !!rawEmail;
-
   const actions = [];
 
-  if (rawPhone && normalizedPhone && showPhone) {
+  if (rawPhone && normalizedPhone) {
     actions.push({
       key: "phone",
       href: "tel:" + normalizedPhone,
@@ -325,7 +305,7 @@ function buildActions(node) {
     });
   }
 
-  if (rawSms && normalizedSms && showSms) {
+  if (rawSms && normalizedSms) {
     actions.push({
       key: "sms",
       href: "sms:" + normalizedSms,
@@ -334,7 +314,7 @@ function buildActions(node) {
     });
   }
 
-  if (rawWhatsapp && normalizedWhatsapp && showWhatsapp) {
+  if (rawWhatsapp && normalizedWhatsapp) {
     actions.push({
       key: "whatsapp",
       href: "https://wa.me/" + normalizedWhatsapp,
@@ -343,7 +323,7 @@ function buildActions(node) {
     });
   }
 
-  if (rawEmail && showEmail) {
+  if (rawEmail) {
     actions.push({
       key: "email",
       href: "mailto:" + rawEmail,
@@ -483,10 +463,10 @@ function renderNode(node) {
 
   renderStatus(node);
 
-  const imageUrl = getTrimmedString(node.image_url || node.profile_image_url);
+  const imageUrl = getTrimmedString(node.image_url);
 
   if (imageUrl) {
-    const imageAlt = node.name || node.profile_name || "Node image";
+    const imageAlt = node.name || "Node image";
     els.nodeImage.src = imageUrl;
     els.nodeImage.alt = imageAlt;
     els.nodeImageSection.style.display = "block";
