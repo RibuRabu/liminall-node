@@ -90,6 +90,13 @@ export default {
 
     if (
       request.method === "POST" &&
+      path === "/api/owner"
+    ) {
+      return updateOwnerNodeFromSession(request, env);
+    }
+
+    if (
+      request.method === "POST" &&
       path === "/api/owner/logout"
     ) {
       return logoutOwnerSession();
@@ -1005,6 +1012,22 @@ async function updateOwnerNode(request, env, token) {
     .bind(auth.tokenHash)
     .first();
 
+  return performOwnerNodeUpdate(request, env, existing);
+}
+
+async function updateOwnerNodeFromSession(request, env) {
+  const existing = await getOwnerSessionRecord(request, env);
+
+  if (!existing) {
+    return Response.json({
+      state: "pin_required"
+    }, { status: 401 });
+  }
+
+  return performOwnerNodeUpdate(request, env, existing);
+}
+
+async function performOwnerNodeUpdate(request, env, existing) {
   let body;
 
   try {

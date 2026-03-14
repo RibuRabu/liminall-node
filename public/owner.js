@@ -279,6 +279,10 @@ function getBootstrapToken() {
   return null;
 }
 
+function hasBootstrapToken() {
+  return typeof bootstrapToken === "string" && bootstrapToken.trim() !== "";
+}
+
 function getLanguage() {
   const params = new URLSearchParams(window.location.search);
   const lang = params.get("lang");
@@ -468,10 +472,17 @@ function setImageButtonsDisabledState() {
 
   const hasCurrentImage = getCurrentImageUrl() !== "";
   const hasSelectedImage = !!selectedImageFile;
+  const canUseTokenRoutes = hasBootstrapToken();
 
-  saveButton.disabled = imageOperationInFlight || !hasSelectedImage;
+  saveButton.disabled = imageOperationInFlight || !canUseTokenRoutes || !hasSelectedImage;
   clearButton.disabled = imageOperationInFlight || !hasSelectedImage;
-  removeButton.disabled = imageOperationInFlight || !hasCurrentImage;
+  removeButton.disabled = imageOperationInFlight || !canUseTokenRoutes || !hasCurrentImage;
+}
+
+function syncTokenRouteControls() {
+  const disabled = !hasBootstrapToken();
+
+  document.getElementById("replaceCarrierButton").disabled = disabled;
 }
 
 function renderNodeImagePanel() {
@@ -684,6 +695,7 @@ function renderNode() {
 
   syncPreferredContactUI();
   renderNodeImagePanel();
+  syncTokenRouteControls();
 }
 
 function renderTimeline() {
@@ -724,7 +736,7 @@ async function fetchOwnerNode() {
 }
 
 async function fetchTimeline() {
-  if (!bootstrapToken) {
+  if (!hasBootstrapToken()) {
     currentEvents = [];
     return;
   }
@@ -771,7 +783,8 @@ function clearPinStatus() {
 }
 
 async function postOwnerUpdate(payload) {
-  const res = await fetch(`/api/owner/${bootstrapToken}`, {
+  const endpoint = hasBootstrapToken() ? `/api/owner/${bootstrapToken}` : "/api/owner";
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: {
       "content-type": "application/json"
@@ -840,6 +853,11 @@ function handleClearNodeImageSelection() {
 }
 
 async function handleSaveNodeImage() {
+  if (!hasBootstrapToken()) {
+    setActionStatus(t("image_upload_failed"), "error");
+    return;
+  }
+
   clearActionStatus();
 
   try {
@@ -879,6 +897,11 @@ async function handleSaveNodeImage() {
 }
 
 async function handleRemoveNodeImage() {
+  if (!hasBootstrapToken()) {
+    setActionStatus(t("image_delete_failed"), "error");
+    return;
+  }
+
   if (!getCurrentImageUrl()) {
     setActionStatus(t("image_delete_failed"), "error");
     return;
@@ -1005,6 +1028,11 @@ async function handleSaveLocation() {
 }
 
 async function handleReplaceCarrier() {
+  if (!hasBootstrapToken()) {
+    setActionStatus(t("carrier_failed"), "error");
+    return;
+  }
+
   if (!window.confirm(t("confirm_replace_carrier"))) {
     return;
   }
