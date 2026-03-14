@@ -145,6 +145,20 @@ export default {
 
     if (
       request.method === "POST" &&
+      path === "/api/owner/image"
+    ) {
+      return uploadOwnerNodeImageFromSession(request, env);
+    }
+
+    if (
+      request.method === "DELETE" &&
+      path === "/api/owner/image"
+    ) {
+      return deleteOwnerNodeImageFromSession(request, env);
+    }
+
+    if (
+      request.method === "POST" &&
       path.startsWith("/api/owner/") &&
       path.endsWith("/image")
     ) {
@@ -772,7 +786,7 @@ async function uploadOwnerNodeImage(request, env, token) {
   const auth = await requireAuthorizedOwner(request, env, token);
 
   if (auth.response) {
-    return auth.response;
+      return auth.response;
   }
 
   const existing = await env.DB.prepare(`
@@ -787,6 +801,30 @@ async function uploadOwnerNodeImage(request, env, token) {
   `)
     .bind(auth.tokenHash)
     .first();
+
+  return uploadOwnerNodeImageForExisting(request, env, existing);
+}
+
+async function uploadOwnerNodeImageFromSession(request, env) {
+  const existing = await getOwnerSessionRecord(request, env);
+
+  if (!existing) {
+    return Response.json({
+      state: "pin_required"
+    }, { status: 401 });
+  }
+
+  return uploadOwnerNodeImageForExisting(request, env, existing);
+}
+
+async function uploadOwnerNodeImageForExisting(request, env, existing) {
+  const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+  const ALLOWED_IMAGE_TYPES = new Set([
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+    "image/gif"
+  ]);
 
   let formData;
 
@@ -915,6 +953,23 @@ async function deleteOwnerNodeImage(request, env, token) {
   `)
     .bind(auth.tokenHash)
     .first();
+
+  return deleteOwnerNodeImageForExisting(env, existing);
+}
+
+async function deleteOwnerNodeImageFromSession(request, env) {
+  const existing = await getOwnerSessionRecord(request, env);
+
+  if (!existing) {
+    return Response.json({
+      state: "pin_required"
+    }, { status: 401 });
+  }
+
+  return deleteOwnerNodeImageForExisting(env, existing);
+}
+
+async function deleteOwnerNodeImageForExisting(env, existing) {
 
   const previousImageUrl = existing.profile_image_url;
   const previousImageKey = getImageKeyFromUrl(previousImageUrl);
