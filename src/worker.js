@@ -577,10 +577,10 @@ async function getPublicNode(env, slug) {
 
   const publicData = {
     slug: row.public_slug || "",
-    name: resolveVisibilityFlag(row.show_profile_name, 1) ? (row.profile_name || "") : "",
-    image_url: resolveVisibilityFlag(row.show_profile_image, 1) ? (row.profile_image_url || "") : "",
-    identifier: resolveVisibilityFlag(row.show_identifier, 1) ? (row.public_identifier || "") : "",
-    message: resolveVisibilityFlag(row.show_message, 1) ? (row.public_message || "") : "",
+    name: resolveVisibilityFlag(row.show_profile_name, 0) ? (row.profile_name || "") : "",
+    image_url: resolveVisibilityFlag(row.show_profile_image, 0) ? (row.profile_image_url || "") : "",
+    identifier: resolveVisibilityFlag(row.show_identifier, 0) ? (row.public_identifier || "") : "",
+    message: resolveVisibilityFlag(row.show_message, 0) ? (row.public_message || "") : "",
     contact_phone: resolveVisibilityFlag(row.show_phone, 0) ? (row.phone || "") : "",
     contact_sms: resolveVisibilityFlag(row.show_sms, 0) ? (row.sms || "") : "",
     contact_email: resolveVisibilityFlag(row.show_email, 0) ? (row.email || "") : "",
@@ -592,7 +592,7 @@ async function getPublicNode(env, slug) {
     location_address: "",
     location_lat: resolveVisibilityFlag(row.show_last_recovery_point, 0) ? row.last_recovery_lat : null,
     location_lon: resolveVisibilityFlag(row.show_last_recovery_point, 0) ? row.last_recovery_lng : null,
-    allow_anonymous_report: resolveVisibilityFlag(row.allow_anonymous_report, 1),
+    allow_anonymous_report: resolveVisibilityFlag(row.allow_anonymous_report, 0),
     status: row.status || ""
   };
 
