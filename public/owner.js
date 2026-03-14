@@ -522,11 +522,10 @@ function setImageButtonsDisabledState() {
 
   const hasCurrentImage = getCurrentImageUrl() !== "";
   const hasSelectedImage = !!selectedImageFile;
-  const canUseTokenRoutes = hasBootstrapToken();
 
-  saveButton.disabled = imageOperationInFlight || !canUseTokenRoutes || !hasSelectedImage;
+  saveButton.disabled = imageOperationInFlight || !hasSelectedImage;
   clearButton.disabled = imageOperationInFlight || !hasSelectedImage;
-  removeButton.disabled = imageOperationInFlight || !canUseTokenRoutes || !hasCurrentImage;
+  removeButton.disabled = imageOperationInFlight || !hasCurrentImage;
 }
 
 function syncTokenRouteControls() {
@@ -961,11 +960,6 @@ function handleClearNodeImageSelection() {
 }
 
 async function handleSaveNodeImage() {
-  if (!hasBootstrapToken()) {
-    setActionStatus(t("image_upload_failed"), "error");
-    return;
-  }
-
   clearActionStatus();
 
   try {
@@ -982,8 +976,11 @@ async function handleSaveNodeImage() {
   try {
     const formData = new FormData();
     formData.append("image", selectedImageFile);
+    const endpoint = hasBootstrapToken()
+      ? `/api/owner/${bootstrapToken}/image`
+      : "/api/owner/image";
 
-    const res = await fetch(`/api/owner/${bootstrapToken}/image`, {
+    const res = await fetch(endpoint, {
       method: "POST",
       body: formData
     });
@@ -1005,11 +1002,6 @@ async function handleSaveNodeImage() {
 }
 
 async function handleRemoveNodeImage() {
-  if (!hasBootstrapToken()) {
-    setActionStatus(t("image_delete_failed"), "error");
-    return;
-  }
-
   if (!getCurrentImageUrl()) {
     setActionStatus(t("image_delete_failed"), "error");
     return;
@@ -1025,7 +1017,10 @@ async function handleRemoveNodeImage() {
   setActionStatus(t("image_deleting"), "success");
 
   try {
-    const res = await fetch(`/api/owner/${bootstrapToken}/image`, {
+    const endpoint = hasBootstrapToken()
+      ? `/api/owner/${bootstrapToken}/image`
+      : "/api/owner/image";
+    const res = await fetch(endpoint, {
       method: "DELETE"
     });
 
