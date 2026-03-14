@@ -25,7 +25,8 @@ export default {
     }
 
     if (request.method === "GET" && path.startsWith("/o/")) {
-      return serveOwnerPage(request, env);
+      const token = getOwnerPathToken(path);
+      return serveOwnerBootstrapPage(request, env, token);
     }
 
     if (request.method === "POST" && path === "/api/provision") {
@@ -157,6 +158,36 @@ async function servePublicPage(request, env) {
 
 async function serveOwnerPage(request, env) {
   return fetchInternalHtmlAsset(request, env, "/owner.html");
+}
+
+async function serveOwnerBootstrapPage(request, env, token) {
+  const status = await getOwnerAuthStatus(request, env, token);
+
+  if (status.state === "invalid_token") {
+    return new Response("Owner token invalid", { status: 404 });
+  }
+
+  if (status.state === "pin_not_set") {
+    const setCookie = await createOwnerSessionCookie(status.auth.id, status.auth.tokenHash, env);
+    return new Response(null, {
+      status: 302,
+      headers: {
+        location: "/owner",
+        "set-cookie": setCookie
+      }
+    });
+  }
+
+  if (status.state === "session_valid") {
+    return new Response(null, {
+      status: 302,
+      headers: {
+        location: "/owner"
+      }
+    });
+  }
+
+  return serveOwnerPage(request, env);
 }
 
 async function fetchInternalHtmlAsset(request, env, assetPath) {
@@ -1528,6 +1559,20 @@ function getOwnerRouteToken(path) {
   }
 
   return parts[2] || null;
+}
+
+function getOwnerPathToken(path) {
+  const parts = path.split("/").filter(Boolean);
+
+  if (parts.length < 2) {
+    return null;
+  }
+
+  if (parts[0] !== "o") {
+    return null;
+  }
+
+  return parts[1] || null;
 }
 
 function buildChangeSet(existing, next) {
