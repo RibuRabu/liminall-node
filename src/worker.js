@@ -1274,6 +1274,7 @@ async function getOwnerAuthRecord(env, token) {
       id,
       owner_token_hash,
       owner_pin_hash,
+      owner_session_version,
       owner_failed_pin_attempts,
       owner_lockout_until
     FROM nodes
@@ -1292,6 +1293,7 @@ async function getOwnerAuthRecord(env, token) {
     tokenHash,
     ownerTokenHash: node.owner_token_hash,
     ownerPinHash: node.owner_pin_hash,
+    ownerSessionVersion: Number(node.owner_session_version || 1),
     ownerFailedPinAttempts: Number(node.owner_failed_pin_attempts || 0),
     ownerLockoutUntil: node.owner_lockout_until
   };
@@ -1332,7 +1334,13 @@ async function getOwnerAuthStatus(request, env, token) {
   }
 
   const cookieValue = getCookieValue(request.headers.get("cookie"), OWNER_SESSION_COOKIE_NAME);
-  const hasValidSession = await verifyOwnerSession(cookieValue, auth.id, auth.tokenHash, env);
+  const hasValidSession = await verifyOwnerSession(
+    cookieValue,
+    auth.id,
+    auth.tokenHash,
+    auth.ownerSessionVersion,
+    env
+  );
 
   return {
     state: hasValidSession ? "session_valid" : "pin_required",
@@ -1379,6 +1387,7 @@ async function getOwnerSessionRecord(request, env) {
     SELECT
       id,
       owner_token_hash,
+      owner_session_version,
       node_type,
       status,
       public_slug,
@@ -1417,7 +1426,13 @@ async function getOwnerSessionRecord(request, env) {
     return null;
   }
 
-  const hasValidSession = await verifyOwnerSession(cookieValue, node.id, node.owner_token_hash, env);
+  const hasValidSession = await verifyOwnerSession(
+    cookieValue,
+    node.id,
+    node.owner_token_hash,
+    Number(node.owner_session_version || 1),
+    env
+  );
 
   if (!hasValidSession) {
     return null;
@@ -1517,23 +1532,39 @@ async function changeOwnerPin(request, env) {
 
   const pinHash = await sha256(newPin);
   const now = new Date().toISOString();
+  const nextSessionVersion = Number(sessionNode.owner_session_version || 1) + 1;
 
   await env.DB.prepare(`
     UPDATE nodes
     SET
       owner_pin_hash = ?,
+      owner_session_version = ?,
       updated_at = ?
     WHERE id = ?
   `)
     .bind(
       pinHash,
+      nextSessionVersion,
       now,
       sessionNode.id
     )
     .run();
 
-  return Response.json({
+  const setCookie = await createOwnerSessionCookie(
+    sessionNode.id,
+    sessionNode.owner_token_hash,
+    nextSessionVersion,
+    env
+  );
+
+  return new Response(JSON.stringify({
     ok: true
+  }), {
+    status: 200,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "set-cookie": setCookie
+    }
   });
 }
 
@@ -1670,7 +1701,12 @@ async function verifyOwnerPinAndIssueSession(request, env, token) {
 
   await clearOwnerPinFailures(env, status.auth.id);
 
-  const setCookie = await createOwnerSessionCookie(status.auth.id, status.auth.tokenHash, env);
+  const setCookie = await createOwnerSessionCookie(
+    status.auth.id,
+    status.auth.tokenHash,
+    status.auth.ownerSessionVersion,
+    env
+  );
 
   return new Response(JSON.stringify({
     state: "session_valid"
@@ -1951,11 +1987,12 @@ function generateIdentifier() {
   return `ID#${id}`;
 }
 
-async function createOwnerSessionCookie(nodeId, tokenHash, env) {
+async function createOwnerSessionCookie(nodeId, tokenHash, sessionVersion, env) {
   const exp = Math.floor(Date.now() / 1000) + OWNER_SESSION_MAX_AGE_SECONDS;
   const payload = JSON.stringify({
     node_id: nodeId,
     token_hash: tokenHash,
+    session_version: sessionVersion,
     exp
   });
   const encodedPayload = base64UrlEncodeString(payload);
@@ -1971,7 +2008,7 @@ async function createOwnerSessionCookie(nodeId, tokenHash, env) {
   ].join("; ");
 }
 
-async function verifyOwnerSession(cookieValue, nodeId, tokenHash, env) {
+async function verifyOwnerSession(cookieValue, nodeId, tokenHash, sessionVersion, env) {
   if (!cookieValue || !env.OWNER_SESSION_SECRET) {
     return false;
   }
@@ -2012,6 +2049,14 @@ async function verifyOwnerSession(cookieValue, nodeId, tokenHash, env) {
   }
 
   if (payload.token_hash !== tokenHash) {
+    return false;
+  }
+
+  if (!Number.isFinite(payload.session_version)) {
+    return false;
+  }
+
+  if (payload.session_version !== sessionVersion) {
     return false;
   }
 
