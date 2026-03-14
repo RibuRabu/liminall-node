@@ -1615,7 +1615,8 @@ async function changeOwnerPin(request, env) {
 
   const pinRow = await env.DB.prepare(`
     SELECT
-      owner_pin_hash
+      owner_pin_hash,
+      owner_failed_pin_attempts
     FROM nodes
     WHERE id = ?
     LIMIT 1
@@ -1626,10 +1627,23 @@ async function changeOwnerPin(request, env) {
   const isValidCurrentPin = await verifyOwnerPin(currentPin, pinRow?.owner_pin_hash);
 
   if (!isValidCurrentPin) {
+    const failedAttempt = await registerFailedOwnerPinAttempt(env, {
+      id: sessionNode.id,
+      ownerFailedPinAttempts: Number(pinRow?.owner_failed_pin_attempts || 0)
+    });
+
+    if (failedAttempt.locked) {
+      return Response.json({
+        state: "locked"
+      }, { status: 403 });
+    }
+
     return Response.json({
       error: "invalid_current_pin"
     }, { status: 401 });
   }
+
+  await clearOwnerPinFailures(env, sessionNode.id);
 
   const pinHash = await sha256(newPin);
   const now = new Date().toISOString();
