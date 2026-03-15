@@ -37,6 +37,10 @@ export default {
       return reissueOwnerToken(request, env);
     }
 
+    if (request.method === "POST" && path === "/api/admin/reset-pin") {
+      return resetOwnerPin(request, env);
+    }
+
     if (request.method === "GET" && path === "/api/admin/nodes") {
       return listAdminNodes(request, env);
     }
@@ -434,6 +438,80 @@ async function reissueOwnerToken(request, env) {
   return Response.json({
     public_slug: node.public_slug,
     owner_url: `/o/${newOwnerToken}`,
+    updated_at: now
+  });
+}
+
+async function resetOwnerPin(request, env) {
+  const adminKey = request.headers.get("x-admin-key");
+
+  if (!env.PROVISION_ADMIN_KEY || adminKey !== env.PROVISION_ADMIN_KEY) {
+    return new Response("Forbidden", { status: 403 });
+  }
+
+  let body;
+
+  try {
+    body = await request.json();
+  } catch {
+    return new Response("Invalid JSON", { status: 400 });
+  }
+
+  const publicSlug = sanitizeRequiredString(body.public_slug, 255);
+
+  if (!publicSlug) {
+    return Response.json({
+      error: "Node not found"
+    }, { status: 404 });
+  }
+
+  const node = await env.DB.prepare(`
+    SELECT
+      id,
+      public_slug
+    FROM nodes
+    WHERE public_slug = ?
+    LIMIT 1
+  `)
+    .bind(publicSlug)
+    .first();
+
+  if (!node) {
+    return Response.json({
+      error: "Node not found"
+    }, { status: 404 });
+  }
+
+  const now = new Date().toISOString();
+
+  await env.DB.prepare(`
+    UPDATE nodes
+    SET
+      owner_pin_hash = NULL,
+      owner_pin_set_at = NULL,
+      owner_failed_pin_attempts = 0,
+      owner_lockout_until = NULL,
+      updated_at = ?
+    WHERE id = ?
+  `)
+    .bind(now, node.id)
+    .run();
+
+  await insertNodeEvent(env, {
+    nodeId: node.id,
+    eventType: "OWNER_PIN_RESET",
+    actorType: "admin",
+    actorRef: null,
+    payload: {
+      public_slug: node.public_slug,
+      reason: "admin_reset"
+    },
+    createdAt: now
+  });
+
+  return Response.json({
+    public_slug: node.public_slug,
+    pin_reset: true,
     updated_at: now
   });
 }
