@@ -257,6 +257,7 @@
       </div>
       <div class="button-row">
         <button id="toggle-key" type="button">Show key</button>
+        <button id="create-node" type="button">Create node</button>
         <button id="load-nodes" type="button" class="primary">Load nodes</button>
       </div>
       <div class="muted" id="selected-node-label">No node selected.</div>
@@ -329,6 +330,7 @@
     const els = {
       adminKey: document.getElementById("admin-key"),
       toggleKey: document.getElementById("toggle-key"),
+      createNode: document.getElementById("create-node"),
       loadNodes: document.getElementById("load-nodes"),
       selectedNodeLabel: document.getElementById("selected-node-label"),
       status: document.getElementById("status"),
@@ -590,6 +592,31 @@
       }
     }
 
+    async function createNode() {
+      setStatus("Creating node...", "loading");
+
+      try {
+        const data = await apiFetch("/api/provision", {
+          method: "POST"
+        });
+        if (!data) return;
+
+        els.actionResult.textContent = formatJson(data);
+        setStatus("Node created successfully.", "success");
+
+        await loadNodes();
+
+        if (data.public_url) {
+          const slug = data.public_url.split("/n/").pop() || "";
+          if (slug) {
+            await selectNode(decodeURIComponent(slug), { preserveActionResult: true });
+          }
+        }
+      } catch (error) {
+        setStatus(error.message, "error");
+      }
+    }
+
     async function selectNode(slug, options) {
       if (!slug) return;
 
@@ -666,6 +693,8 @@
       els.adminKey.type = isPassword ? "text" : "password";
       els.toggleKey.textContent = isPassword ? "Hide key" : "Show key";
     });
+
+    els.createNode.addEventListener("click", createNode);
 
     els.loadNodes.addEventListener("click", loadNodes);
 
