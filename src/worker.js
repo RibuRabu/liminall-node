@@ -787,6 +787,12 @@ async function getPublicNode(env, slug) {
     return new Response("Node not found", { status: 404 });
   }
 
+  if ((row.status || "").trim().toLowerCase() === "disabled") {
+    return Response.json({
+      error: "Node disabled"
+    }, { status: 410 });
+  }
+
   const publicData = {
     slug: row.public_slug || "",
     name: resolveVisibilityFlag(row.show_profile_name, 0) ? (row.profile_name || "") : "",
