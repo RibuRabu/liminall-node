@@ -1117,7 +1117,6 @@ async function performOwnerNodeUpdate(request, env, existing) {
   const next = {
     status: sanitizeStatus(body.status, existing.status),
     profile_name: sanitizeNullableString(body.profile_name, existing.profile_name, 120),
-    profile_image_url: sanitizeNullableString(body.profile_image_url, existing.profile_image_url, 1000),
     public_message: sanitizeNullableString(body.public_message, existing.public_message, 2000),
     phone: sanitizeNullableString(body.phone, existing.phone, 100),
     sms: sanitizeNullableString(body.sms, existing.sms, 100),
@@ -1146,7 +1145,6 @@ async function performOwnerNodeUpdate(request, env, existing) {
     SET
       status = ?,
       profile_name = ?,
-      profile_image_url = ?,
       public_message = ?,
       phone = ?,
       sms = ?,
@@ -1172,7 +1170,6 @@ async function performOwnerNodeUpdate(request, env, existing) {
     .bind(
       next.status,
       next.profile_name,
-      next.profile_image_url,
       next.public_message,
       next.phone,
       next.sms,
