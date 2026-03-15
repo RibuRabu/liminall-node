@@ -450,36 +450,32 @@ async function getAdminNodeInspector(request, env, slug) {
     return new Response("Forbidden", { status: 403 });
   }
 
+  if (!slug) {
+    return Response.json({
+      error: "Node not found"
+    }, { status: 404 });
+  }
+
   const node = await env.DB.prepare(`
     SELECT
       id,
-      node_type,
-      status,
       public_slug,
-      public_identifier,
+      owner_token_hash,
+      created_at,
+      updated_at,
       profile_name,
       profile_image_url,
       public_message,
+      public_identifier,
       phone,
       sms,
       email,
       whatsapp,
       preferred_contact,
-      last_recovery_lat,
-      last_recovery_lng,
-      last_recovery_label,
-      show_profile_name,
-      show_profile_image,
-      show_identifier,
-      show_message,
       show_phone,
       show_sms,
       show_email,
-      show_whatsapp,
-      show_last_recovery_point,
-      allow_anonymous_report,
-      created_at,
-      updated_at
+      show_whatsapp
     FROM nodes
     WHERE public_slug = ?
     LIMIT 1
@@ -488,53 +484,30 @@ async function getAdminNodeInspector(request, env, slug) {
     .first();
 
   if (!node) {
-    return new Response("Node not found", { status: 404 });
+    return Response.json({
+      error: "Node not found"
+    }, { status: 404 });
   }
 
-  const eventsResult = await env.DB.prepare(`
-    SELECT
-      id,
-      event_type,
-      actor_type,
-      actor_ref,
-      payload_json,
-      created_at
-    FROM node_events
-    WHERE node_id = ?
-    ORDER BY created_at DESC
-  `)
-    .bind(node.id)
-    .all();
-
-  const reportsResult = await env.DB.prepare(`
-    SELECT
-      id,
-      message,
-      image_url,
-      location,
-      created_at
-    FROM reports
-    WHERE node_id = ?
-    ORDER BY created_at DESC
-  `)
-    .bind(node.id)
-    .all();
-
-  const events = (eventsResult.results || []).map((row) => ({
-    id: row.id,
-    event_type: row.event_type,
-    actor_type: row.actor_type,
-    actor_ref: row.actor_ref,
-    payload: safeParseJson(row.payload_json),
-    created_at: row.created_at
-  }));
-
-  const reports = reportsResult.results || [];
-
   return Response.json({
-    node,
-    events,
-    reports
+    node_id: node.id,
+    public_slug: node.public_slug || "",
+    owner_token: null,
+    created_at: node.created_at || "",
+    updated_at: node.updated_at || "",
+    name: node.profile_name || "",
+    identifier: node.public_identifier || "",
+    message: node.public_message || "",
+    phone: node.phone || "",
+    sms: node.sms || "",
+    email: node.email || "",
+    whatsapp: node.whatsapp || "",
+    show_phone: node.show_phone,
+    show_sms: node.show_sms,
+    show_email: node.show_email,
+    show_whatsapp: node.show_whatsapp,
+    preferred_contact: node.preferred_contact || "",
+    image_url: node.profile_image_url || ""
   });
 }
 
