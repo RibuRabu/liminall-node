@@ -110,6 +110,12 @@
       color: #fff;
     }
 
+    button.danger {
+      border-color: var(--danger);
+      background: var(--danger);
+      color: #fff;
+    }
+
     button:disabled {
       opacity: 0.6;
       cursor: not-allowed;
@@ -305,6 +311,7 @@
           <div class="button-row" style="margin-top: 12px;">
             <button id="reissue-owner" type="button" disabled>Reissue owner link</button>
             <button id="reset-pin" type="button" disabled>Reset PIN</button>
+            <button id="disable-node" type="button" class="danger" disabled>Disable node</button>
           </div>
           <div style="margin-top: 12px;">
             <pre id="action-result">No action run yet.</pre>
@@ -342,6 +349,7 @@
       inspectorJson: document.getElementById("inspector-json"),
       reissueOwner: document.getElementById("reissue-owner"),
       resetPin: document.getElementById("reset-pin"),
+      disableNode: document.getElementById("disable-node"),
       actionResult: document.getElementById("action-result"),
       eventsEmpty: document.getElementById("events-empty"),
       eventsList: document.getElementById("events-list")
@@ -430,6 +438,7 @@
       els.eventsList.innerHTML = "";
       els.reissueOwner.disabled = true;
       els.resetPin.disabled = true;
+      els.disableNode.disabled = true;
       els.actionResult.textContent = "No action run yet.";
     }
 
@@ -525,6 +534,7 @@
       els.inspectorJson.textContent = formatJson(state.selectedNode);
       els.reissueOwner.disabled = false;
       els.resetPin.disabled = false;
+      els.disableNode.disabled = false;
     }
 
     function renderEvents() {
@@ -707,6 +717,10 @@
 
     els.resetPin.addEventListener("click", () => {
       runNodeAction("/api/admin/reset-pin", "PIN reset");
+    });
+
+    els.disableNode.addEventListener("click", () => {
+      runNodeAction("/api/admin/disable-node", "Node disable");
     });
 
     resetSelection();
