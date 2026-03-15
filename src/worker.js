@@ -37,6 +37,10 @@ export default {
       return reissueOwnerToken(request, env);
     }
 
+    if (request.method === "GET" && path === "/api/admin/nodes") {
+      return listAdminNodes(request, env);
+    }
+
     if (request.method === "GET" && path.startsWith("/api/admin/node/")) {
       const slug = path.split("/").pop();
       return getAdminNodeInspector(request, env, slug);
@@ -508,6 +512,41 @@ async function getAdminNodeInspector(request, env, slug) {
     show_whatsapp: node.show_whatsapp,
     preferred_contact: node.preferred_contact || "",
     image_url: node.profile_image_url || ""
+  });
+}
+
+async function listAdminNodes(request, env) {
+  const adminKey = request.headers.get("x-admin-key");
+
+  if (!env.PROVISION_ADMIN_KEY || adminKey !== env.PROVISION_ADMIN_KEY) {
+    return new Response("Forbidden", { status: 403 });
+  }
+
+  const result = await env.DB.prepare(`
+    SELECT
+      id,
+      public_slug,
+      created_at,
+      updated_at,
+      profile_name,
+      public_identifier
+    FROM nodes
+    ORDER BY created_at DESC
+    LIMIT 100
+  `).all();
+
+  const nodes = (result.results || []).map((row) => ({
+    node_id: row.id,
+    slug: row.public_slug || "",
+    created_at: row.created_at || "",
+    updated_at: row.updated_at || "",
+    name: row.profile_name || "",
+    identifier: row.public_identifier || ""
+  }));
+
+  return Response.json({
+    count: nodes.length,
+    nodes
   });
 }
 
