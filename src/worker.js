@@ -866,6 +866,7 @@ async function uploadOwnerNodeImageForExisting(request, env, existing) {
     UPDATE nodes
     SET
       profile_image_url = ?,
+      show_profile_image = 1,
       updated_at = ?
     WHERE id = ?
   `)
