@@ -204,6 +204,7 @@ export default {
 
 const OWNER_SESSION_COOKIE_NAME = "owner_session";
 const OWNER_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24;
+const ANONYMOUS_REPORT_COOLDOWN_SECONDS = 60;
 const OWNER_PIN_MAX_ATTEMPTS = 5;
 const OWNER_PIN_LOCKOUT_SECONDS = 15 * 60;
 const PUBLIC_APP_BASE_URL = "https://node.liminall.fi";
@@ -1287,6 +1288,35 @@ async function createAnonymousReport(request, env, slug) {
     return new Response("Message is required", { status: 400 });
   }
 
+  const clientIpHeader =
+    request.headers.get("cf-connecting-ip") ||
+    request.headers.get("x-forwarded-for") ||
+    "";
+  const clientIp = clientIpHeader.split(",")[0].trim();
+  const clientIpHash = clientIp ? await sha256(clientIp) : null;
+
+  if (clientIpHash) {
+    const cooldownWindowStart = new Date(
+      Date.now() - ANONYMOUS_REPORT_COOLDOWN_SECONDS * 1000
+    ).toISOString();
+
+    const recentReport = await env.DB.prepare(`
+      SELECT id
+      FROM node_events
+      WHERE node_id = ?
+        AND event_type = 'ANONYMOUS_REPORT_CREATED'
+        AND created_at >= ?
+        AND json_extract(payload_json, '$.client_ip_hash') = ?
+      LIMIT 1
+    `)
+      .bind(node.id, cooldownWindowStart, clientIpHash)
+      .first();
+
+    if (recentReport) {
+      return new Response("Too many requests", { status: 429 });
+    }
+  }
+
   const reportId = crypto.randomUUID();
   const now = new Date().toISOString();
 
@@ -1318,6 +1348,7 @@ async function createAnonymousReport(request, env, slug) {
       report_id: reportId,
       finder_name: finderName,
       finder_contact: finderContact,
+      client_ip_hash: clientIpHash,
       message,
       location
     },
