@@ -319,6 +319,21 @@
         </section>
 
         <section class="panel">
+          <h2>Batch Provisioning</h2>
+          <div class="button-row" style="margin-top: 12px; align-items: end;">
+            <div>
+              <label for="batch-quantity">Quantity</label>
+              <input id="batch-quantity" type="number" min="1" max="100" step="1" value="1" style="width: 120px;">
+            </div>
+            <button id="create-batch" type="button">Create batch</button>
+            <button id="copy-batch-results" type="button" disabled>Copy batch results</button>
+          </div>
+          <div style="margin-top: 12px;">
+            <pre id="batch-results">No batch results yet.</pre>
+          </div>
+        </section>
+
+        <section class="panel">
           <h2>Events</h2>
           <div id="events-empty" class="muted" style="margin-top: 12px;">Select a node to load events.</div>
           <div id="events-list" class="events" style="margin-top: 12px;"></div>
@@ -332,6 +347,8 @@
       nodes: [],
       selectedSlug: "",
       selectedNode: null,
+      batchResults: [],
+      isCreatingBatch: false,
       selectedEvents: []
     };
 
@@ -340,6 +357,9 @@
       toggleKey: document.getElementById("toggle-key"),
       createNode: document.getElementById("create-node"),
       loadNodes: document.getElementById("load-nodes"),
+      batchQuantity: document.getElementById("batch-quantity"),
+      createBatch: document.getElementById("create-batch"),
+      copyBatchResults: document.getElementById("copy-batch-results"),
       selectedNodeLabel: document.getElementById("selected-node-label"),
       status: document.getElementById("status"),
       nodesBody: document.getElementById("nodes-body"),
@@ -351,6 +371,7 @@
       resetPin: document.getElementById("reset-pin"),
       disableNode: document.getElementById("disable-node"),
       actionResult: document.getElementById("action-result"),
+      batchResults: document.getElementById("batch-results"),
       eventsEmpty: document.getElementById("events-empty"),
       eventsList: document.getElementById("events-list")
     };
@@ -423,6 +444,39 @@
       });
 
       return readResponse(res);
+    }
+
+    function getBatchQuantity() {
+      const value = Number.parseInt(els.batchQuantity.value, 10);
+      if (!Number.isFinite(value)) return 0;
+      return value;
+    }
+
+    function formatBatchResults(entries) {
+      if (!entries.length) {
+        return "No batch results yet.";
+      }
+
+      return entries.map((entry, index) => {
+        return [
+          String(index + 1),
+          "id:     " + (entry.identifier || ""),
+          "public: " + (entry.public_url || ""),
+          "owner:  " + (entry.owner_url || "")
+        ].join("\n");
+      }).join("\n\n");
+    }
+
+    function renderBatchResults() {
+      els.batchResults.textContent = formatBatchResults(state.batchResults);
+      els.copyBatchResults.disabled = state.isCreatingBatch || state.batchResults.length === 0;
+    }
+
+    function setBatchCreationLocked(locked) {
+      state.isCreatingBatch = locked;
+      els.createNode.disabled = locked;
+      els.createBatch.disabled = locked;
+      els.copyBatchResults.disabled = locked || state.batchResults.length === 0;
     }
 
     function resetSelection() {
@@ -630,6 +684,59 @@
       }
     }
 
+    async function createBatch() {
+      const quantity = getBatchQuantity();
+
+      if (quantity < 1 || quantity > 100) {
+        setStatus("Enter a batch quantity between 1 and 100.", "error");
+        return;
+      }
+
+      state.batchResults = [];
+      renderBatchResults();
+      setBatchCreationLocked(true);
+      setStatus("Creating batch of " + quantity + " nodes...", "loading");
+
+      try {
+        for (let index = 0; index < quantity; index += 1) {
+          const data = await apiFetch("/api/provision", {
+            method: "POST"
+          });
+          if (!data) return;
+
+          state.batchResults.push({
+            identifier: data.identifier || "",
+            public_url: data.public_url || "",
+            owner_url: data.owner_url || ""
+          });
+          renderBatchResults();
+          setStatus("Creating batch: " + (index + 1) + " / " + quantity, "loading");
+        }
+
+        await loadNodes();
+        setStatus("Created batch of " + state.batchResults.length + " nodes.", "success");
+      } catch (error) {
+        setStatus(error.message, "error");
+      } finally {
+        setBatchCreationLocked(false);
+        renderBatchResults();
+      }
+    }
+
+    async function copyBatchResults() {
+      if (!state.batchResults.length) {
+        setStatus("No batch results available to copy.", "error");
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(formatBatchResults(state.batchResults));
+        setStatus("Batch results copied.", "success");
+      } catch {
+        setStatus("Clipboard copy failed.", "error");
+      }
+    }
+
     async function selectNode(slug, options) {
       if (!slug) return;
 
@@ -708,6 +815,8 @@
     });
 
     els.createNode.addEventListener("click", createNode);
+    els.createBatch.addEventListener("click", createBatch);
+    els.copyBatchResults.addEventListener("click", copyBatchResults);
 
     els.loadNodes.addEventListener("click", loadNodes);
 
@@ -723,6 +832,8 @@
       runNodeAction("/api/admin/disable-node", "Node disable");
     });
 
+    setBatchCreationLocked(false);
+    renderBatchResults();
     resetSelection();
     setStatus("Enter the admin key, then load nodes.", "");
   </script>
