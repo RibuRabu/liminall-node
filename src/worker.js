@@ -609,6 +609,7 @@ async function getAdminNodeInspector(request, env, slug) {
       id,
       public_slug,
       owner_token_hash,
+      status,
       created_at,
       updated_at,
       profile_name,
@@ -640,6 +641,7 @@ async function getAdminNodeInspector(request, env, slug) {
   return Response.json({
     node_id: node.id,
     public_slug: node.public_slug || "",
+    status: node.status || "",
     owner_token: null,
     created_at: node.created_at || "",
     updated_at: node.updated_at || "",
@@ -725,6 +727,7 @@ async function listAdminNodes(request, env) {
     SELECT
       id,
       public_slug,
+      status,
       created_at,
       updated_at,
       profile_name,
@@ -737,6 +740,7 @@ async function listAdminNodes(request, env) {
   const nodes = (result.results || []).map((row) => ({
     node_id: row.id,
     slug: row.public_slug || "",
+    status: row.status || "",
     created_at: row.created_at || "",
     updated_at: row.updated_at || "",
     name: row.profile_name || "",
