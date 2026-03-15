@@ -384,17 +384,17 @@ async function reissueOwnerToken(request, env) {
   }
 
   const publicSlug = sanitizeRequiredString(body.public_slug, 255);
-  const reason = sanitizeNullableString(body.reason, null, 255);
 
   if (!publicSlug) {
-    return new Response("public_slug is required", { status: 400 });
+    return Response.json({
+      error: "Node not found"
+    }, { status: 404 });
   }
 
   const node = await env.DB.prepare(`
     SELECT
       id,
-      public_slug,
-      public_identifier
+      public_slug
     FROM nodes
     WHERE public_slug = ?
     LIMIT 1
@@ -403,7 +403,9 @@ async function reissueOwnerToken(request, env) {
     .first();
 
   if (!node) {
-    return new Response("Node not found", { status: 404 });
+    return Response.json({
+      error: "Node not found"
+    }, { status: 404 });
   }
 
   const newOwnerToken = generateToken();
@@ -424,26 +426,10 @@ async function reissueOwnerToken(request, env) {
     )
     .run();
 
-  await insertNodeEvent(env, {
-    nodeId: node.id,
-    eventType: "OWNER_TOKEN_REISSUED",
-    actorType: "admin",
-    actorRef: null,
-    payload: {
-      public_slug: node.public_slug,
-      public_identifier: node.public_identifier,
-      reason: reason || "admin_reissue",
-      token_format: "base64url_128bit"
-    },
-    createdAt: now
-  });
-
   return Response.json({
-    ok: true,
     public_slug: node.public_slug,
-    public_identifier: node.public_identifier,
     owner_url: `/o/${newOwnerToken}`,
-    created_at: now
+    updated_at: now
   });
 }
 
