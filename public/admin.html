@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Liminall Node Admin</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --border: #d7dce3;
+      --text: #1b2430;
+      --muted: #5f6b7a;
+      --accent: #1d4ed8;
+      --danger: #b42318;
+      --success: #067647;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .page {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 0 0 12px;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .toolbar,
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(220px, 340px) auto auto;
+      gap: 12px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(420px, 520px) 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    input,
+    button,
+    textarea {
+      width: 100%;
+      font: inherit;
+    }
+
+    input {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    button {
+      width: auto;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    button.primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .status {
+      min-height: 44px;
+      margin-bottom: 16px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--panel);
+      white-space: pre-wrap;
+    }
+
+    .status.is-loading {
+      color: var(--muted);
+    }
+
+    .status.is-success {
+      border-color: #a6f4c5;
+      color: var(--success);
+      background: #ecfdf3;
+    }
+
+    .status.is-error {
+      border-color: #fecdca;
+      color: var(--danger);
+      background: #fef3f2;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      max-height: 70vh;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th,
+    td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    tbody tr {
+      cursor: pointer;
+    }
+
+    tbody tr:hover {
+      background: #f8fafc;
+    }
+
+    tbody tr.selected {
+      background: #eff6ff;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .mono {
+      font-family: Consolas, Monaco, monospace;
+    }
+
+    pre {
+      margin: 0;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fbfcfe;
+      overflow: auto;
+      font: 13px/1.5 Consolas, Monaco, monospace;
+    }
+
+    .events {
+      display: grid;
+      gap: 10px;
+    }
+
+    .event {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcfe;
+    }
+
+    .event-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .keyvals {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 8px 12px;
+      margin-bottom: 16px;
+    }
+
+    .keyvals dt {
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .keyvals dd {
+      margin: 0;
+      word-break: break-word;
+    }
+
+    @media (max-width: 980px) {
+      .toolbar,
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .keyvals {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>Liminall Node Admin</h1>
+    <p>Internal admin tools for node inspection and recovery.</p>
+
+    <div class="toolbar" style="margin-top: 16px;">
+      <div>
+        <label for="admin-key">Admin key</label>
+        <input id="admin-key" type="password" autocomplete="off" spellcheck="false" placeholder="x-admin-key">
+      </div>
+      <div class="button-row">
+        <button id="toggle-key" type="button">Show key</button>
+        <button id="load-nodes" type="button" class="primary">Load nodes</button>
+      </div>
+      <div class="muted" id="selected-node-label">No node selected.</div>
+    </div>
+
+    <div id="status" class="status"></div>
+
+    <div class="layout">
+      <section class="panel">
+        <h2>Nodes</h2>
+        <div class="table-wrap" style="margin-top: 12px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Slug</th>
+                <th>Name</th>
+                <th>Identifier</th>
+                <th>Created</th>
+                <th>Updated</th>
+              </tr>
+            </thead>
+            <tbody id="nodes-body">
+              <tr>
+                <td colspan="5" class="muted">Load nodes to view the network list.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="stack">
+        <section class="panel">
+          <h2>Node Inspector</h2>
+          <div id="inspector-empty" class="muted" style="margin-top: 12px;">Select a node to inspect it.</div>
+          <div id="inspector-content" hidden style="margin-top: 12px;">
+            <dl class="keyvals" id="inspector-fields"></dl>
+            <h3>Raw JSON</h3>
+            <pre id="inspector-json"></pre>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Admin Actions</h2>
+          <div class="button-row" style="margin-top: 12px;">
+            <button id="reissue-owner" type="button" disabled>Reissue owner link</button>
+            <button id="reset-pin" type="button" disabled>Reset PIN</button>
+          </div>
+          <div style="margin-top: 12px;">
+            <pre id="action-result">No action run yet.</pre>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Events</h2>
+          <div id="events-empty" class="muted" style="margin-top: 12px;">Select a node to load events.</div>
+          <div id="events-list" class="events" style="margin-top: 12px;"></div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      nodes: [],
+      selectedSlug: "",
+      selectedNode: null,
+      selectedEvents: []
+    };
+
+    const els = {
+      adminKey: document.getElementById("admin-key"),
+      toggleKey: document.getElementById("toggle-key"),
+      loadNodes: document.getElementById("load-nodes"),
+      selectedNodeLabel: document.getElementById("selected-node-label"),
+      status: document.getElementById("status"),
+      nodesBody: document.getElementById("nodes-body"),
+      inspectorEmpty: document.getElementById("inspector-empty"),
+      inspectorContent: document.getElementById("inspector-content"),
+      inspectorFields: document.getElementById("inspector-fields"),
+      inspectorJson: document.getElementById("inspector-json"),
+      reissueOwner: document.getElementById("reissue-owner"),
+      resetPin: document.getElementById("reset-pin"),
+      actionResult: document.getElementById("action-result"),
+      eventsEmpty: document.getElementById("events-empty"),
+      eventsList: document.getElementById("events-list")
+    };
+
+    function getAdminKey() {
+      return els.adminKey.value.trim();
+    }
+
+    function requireAdminKey() {
+      const adminKey = getAdminKey();
+
+      if (!adminKey) {
+        setStatus("Enter the admin key first.", "error");
+        return null;
+      }
+
+      return adminKey;
+    }
+
+    function setStatus(message, type) {
+      els.status.textContent = message || "";
+      els.status.className = "status";
+      if (type) {
+        els.status.classList.add("is-" + type);
+      }
+    }
+
+    function formatJson(value) {
+      return JSON.stringify(value, null, 2);
+    }
+
+    async function readResponse(res) {
+      const text = await res.text();
+      let data = null;
+
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = text;
+        }
+      }
+
+      if (!res.ok) {
+        const detail = typeof data === "string" ? data : (data && (data.error || data.message)) || "";
+        throw new Error("HTTP " + res.status + (detail ? ": " + detail : ""));
+      }
+
+      return data;
+    }
+
+    async function apiFetch(path, options) {
+      const adminKey = requireAdminKey();
+      if (!adminKey) return null;
+
+      const nextOptions = options || {};
+      const headers = new Headers(nextOptions.headers || {});
+      headers.set("x-admin-key", adminKey);
+      headers.set("Accept", "application/json");
+
+      if (nextOptions.body && !headers.has("Content-Type")) {
+        headers.set("Content-Type", "application/json");
+      }
+
+      const res = await fetch(path, {
+        method: nextOptions.method || "GET",
+        headers,
+        body: nextOptions.body,
+        cache: "no-store"
+      });
+
+      return readResponse(res);
+    }
+
+    function resetSelection() {
+      state.selectedSlug = "";
+      state.selectedNode = null;
+      state.selectedEvents = [];
+      els.selectedNodeLabel.textContent = "No node selected.";
+      els.inspectorEmpty.hidden = false;
+      els.inspectorContent.hidden = true;
+      els.inspectorFields.innerHTML = "";
+      els.inspectorJson.textContent = "";
+      els.eventsEmpty.hidden = false;
+      els.eventsList.innerHTML = "";
+      els.reissueOwner.disabled = true;
+      els.resetPin.disabled = true;
+      els.actionResult.textContent = "No action run yet.";
+    }
+
+    function renderNodes() {
+      els.nodesBody.innerHTML = "";
+
+      if (!state.nodes.length) {
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+        cell.colSpan = 5;
+        cell.className = "muted";
+        cell.textContent = "No nodes returned.";
+        row.appendChild(cell);
+        els.nodesBody.appendChild(row);
+        return;
+      }
+
+      for (const node of state.nodes) {
+        const row = document.createElement("tr");
+        if (node.slug === state.selectedSlug) {
+          row.classList.add("selected");
+        }
+
+        row.addEventListener("click", () => {
+          selectNode(node.slug);
+        });
+
+        const cells = [
+          node.slug || "",
+          node.name || "",
+          node.identifier || "",
+          node.created_at || "",
+          node.updated_at || ""
+        ];
+
+        for (const value of cells) {
+          const cell = document.createElement("td");
+          cell.textContent = value;
+          row.appendChild(cell);
+        }
+
+        els.nodesBody.appendChild(row);
+      }
+    }
+
+    function renderInspector() {
+      if (!state.selectedNode) {
+        els.inspectorEmpty.hidden = false;
+        els.inspectorContent.hidden = true;
+        return;
+      }
+
+      els.inspectorEmpty.hidden = true;
+      els.inspectorContent.hidden = false;
+      els.inspectorFields.innerHTML = "";
+
+      const fieldOrder = [
+        ["node_id", "Node ID"],
+        ["public_slug", "Slug"],
+        ["created_at", "Created"],
+        ["updated_at", "Updated"],
+        ["name", "Name"],
+        ["identifier", "Identifier"],
+        ["message", "Message"],
+        ["phone", "Phone"],
+        ["sms", "SMS"],
+        ["email", "Email"],
+        ["whatsapp", "WhatsApp"],
+        ["show_phone", "Show phone"],
+        ["show_sms", "Show SMS"],
+        ["show_email", "Show email"],
+        ["show_whatsapp", "Show WhatsApp"],
+        ["preferred_contact", "Preferred contact"],
+        ["image_url", "Image URL"],
+        ["owner_token", "Owner token"]
+      ];
+
+      for (const [key, label] of fieldOrder) {
+        const dt = document.createElement("dt");
+        dt.textContent = label;
+        const dd = document.createElement("dd");
+        const value = state.selectedNode[key];
+        dd.textContent = value === null || value === undefined || value === "" ? "—" : String(value);
+        if (typeof value === "string" && (key === "node_id" || key === "image_url" || key === "public_slug")) {
+          dd.classList.add("mono");
+        }
+        els.inspectorFields.appendChild(dt);
+        els.inspectorFields.appendChild(dd);
+      }
+
+      els.inspectorJson.textContent = formatJson(state.selectedNode);
+      els.reissueOwner.disabled = false;
+      els.resetPin.disabled = false;
+    }
+
+    function renderEvents() {
+      els.eventsList.innerHTML = "";
+
+      if (!state.selectedSlug) {
+        els.eventsEmpty.hidden = false;
+        return;
+      }
+
+      if (!state.selectedEvents.length) {
+        els.eventsEmpty.hidden = false;
+        els.eventsEmpty.textContent = "No events found for this node.";
+        return;
+      }
+
+      els.eventsEmpty.hidden = true;
+
+      for (const event of state.selectedEvents) {
+        const item = document.createElement("article");
+        item.className = "event";
+
+        const head = document.createElement("div");
+        head.className = "event-head";
+
+        const left = document.createElement("div");
+        left.innerHTML = "<strong>" + escapeHtml(event.event_type || "") + "</strong><div class=\"muted\">" + escapeHtml(event.actor_type || "") + (event.actor_ref ? " / " + escapeHtml(String(event.actor_ref)) : "") + "</div>";
+
+        const right = document.createElement("div");
+        right.className = "mono muted";
+        right.textContent = event.created_at || "";
+
+        head.appendChild(left);
+        head.appendChild(right);
+
+        const body = document.createElement("pre");
+        body.textContent = formatJson(event.payload);
+
+        item.appendChild(head);
+        item.appendChild(body);
+        els.eventsList.appendChild(item);
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    async function loadNodes() {
+      resetSelection();
+      setStatus("Loading nodes...", "loading");
+
+      try {
+        const data = await apiFetch("/api/admin/nodes");
+        if (!data) return;
+        state.nodes = Array.isArray(data.nodes) ? data.nodes : [];
+        renderNodes();
+        setStatus("Loaded " + state.nodes.length + " nodes.", "success");
+      } catch (error) {
+        state.nodes = [];
+        renderNodes();
+        setStatus(error.message, "error");
+      }
+    }
+
+    async function selectNode(slug, options) {
+      if (!slug) return;
+
+      const preserveActionResult = !!options?.preserveActionResult;
+      state.selectedSlug = slug;
+      state.selectedNode = null;
+      state.selectedEvents = [];
+      renderNodes();
+      renderInspector();
+      renderEvents();
+      els.selectedNodeLabel.textContent = "Selected: " + slug;
+      if (!preserveActionResult) {
+        els.actionResult.textContent = "No action run yet.";
+      }
+      setStatus("Loading node inspector and events for " + slug + "...", "loading");
+
+      try {
+        const [node, eventsData] = await Promise.all([
+          apiFetch("/api/admin/node/" + encodeURIComponent(slug)),
+          apiFetch("/api/admin/node/" + encodeURIComponent(slug) + "/events")
+        ]);
+
+        if (!node || !eventsData) return;
+
+        state.selectedNode = node;
+        state.selectedEvents = Array.isArray(eventsData.events) ? eventsData.events : [];
+        renderInspector();
+        renderEvents();
+        renderNodes();
+        setStatus("Loaded node inspector and events for " + slug + ".", "success");
+      } catch (error) {
+        resetSelection();
+        renderNodes();
+        setStatus(error.message, "error");
+      }
+    }
+
+    async function runNodeAction(path, successLabel) {
+      if (!state.selectedSlug) {
+        setStatus("Select a node first.", "error");
+        return;
+      }
+
+      setStatus(successLabel + " in progress...", "loading");
+
+      try {
+        const data = await apiFetch(path, {
+          method: "POST",
+          body: JSON.stringify({
+            public_slug: state.selectedSlug
+          })
+        });
+
+        if (!data) return;
+
+        els.actionResult.textContent = formatJson(data);
+        setStatus(successLabel + " completed for " + state.selectedSlug + ".", "success");
+
+        const target = state.nodes.find((node) => node.slug === state.selectedSlug);
+        if (target && data.updated_at) {
+          target.updated_at = data.updated_at;
+          renderNodes();
+        }
+
+        await selectNode(state.selectedSlug, { preserveActionResult: true });
+      } catch (error) {
+        els.actionResult.textContent = error.message;
+        setStatus(error.message, "error");
+      }
+    }
+
+    els.toggleKey.addEventListener("click", () => {
+      const isPassword = els.adminKey.type === "password";
+      els.adminKey.type = isPassword ? "text" : "password";
+      els.toggleKey.textContent = isPassword ? "Hide key" : "Show key";
+    });
+
+    els.loadNodes.addEventListener("click", loadNodes);
+
+    els.reissueOwner.addEventListener("click", () => {
+      runNodeAction("/api/admin/reissue-owner", "Owner link reissue");
+    });
+
+    els.resetPin.addEventListener("click", () => {
+      runNodeAction("/api/admin/reset-pin", "PIN reset");
+    });
+
+    resetSelection();
+    setStatus("Enter the admin key, then load nodes.", "");
+  </script>
+</body>
+</html>
