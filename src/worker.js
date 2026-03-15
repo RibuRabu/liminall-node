@@ -41,6 +41,11 @@ export default {
       return listAdminNodes(request, env);
     }
 
+    if (request.method === "GET" && path.startsWith("/api/admin/node/") && path.endsWith("/events")) {
+      const slug = path.split("/").slice(-2, -1)[0];
+      return getAdminNodeEvents(request, env, slug);
+    }
+
     if (request.method === "GET" && path.startsWith("/api/admin/node/")) {
       const slug = path.split("/").pop();
       return getAdminNodeInspector(request, env, slug);
@@ -498,6 +503,61 @@ async function getAdminNodeInspector(request, env, slug) {
     show_whatsapp: node.show_whatsapp,
     preferred_contact: node.preferred_contact || "",
     image_url: node.profile_image_url || ""
+  });
+}
+
+async function getAdminNodeEvents(request, env, slug) {
+  const adminKey = request.headers.get("x-admin-key");
+
+  if (!env.PROVISION_ADMIN_KEY || adminKey !== env.PROVISION_ADMIN_KEY) {
+    return new Response("Forbidden", { status: 403 });
+  }
+
+  const node = await env.DB.prepare(`
+    SELECT
+      id,
+      public_slug
+    FROM nodes
+    WHERE public_slug = ?
+    LIMIT 1
+  `)
+    .bind(slug)
+    .first();
+
+  if (!node) {
+    return Response.json({
+      error: "Node not found"
+    }, { status: 404 });
+  }
+
+  const eventsResult = await env.DB.prepare(`
+    SELECT
+      id,
+      event_type,
+      actor_type,
+      actor_ref,
+      payload_json,
+      created_at
+    FROM node_events
+    WHERE node_id = ?
+    ORDER BY created_at DESC
+    LIMIT 100
+  `)
+    .bind(node.id)
+    .all();
+
+  const events = (eventsResult.results || []).map((row) => ({
+    id: row.id,
+    event_type: row.event_type,
+    actor_type: row.actor_type,
+    actor_ref: row.actor_ref,
+    payload: safeParseJson(row.payload_json),
+    created_at: row.created_at
+  }));
+
+  return Response.json({
+    public_slug: node.public_slug,
+    events
   });
 }
 
