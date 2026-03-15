@@ -41,6 +41,10 @@ export default {
       return resetOwnerPin(request, env);
     }
 
+    if (request.method === "POST" && path === "/api/admin/disable-node") {
+      return disableAdminNode(request, env);
+    }
+
     if (request.method === "GET" && path === "/api/admin/nodes") {
       return listAdminNodes(request, env);
     }
@@ -512,6 +516,77 @@ async function resetOwnerPin(request, env) {
   return Response.json({
     public_slug: node.public_slug,
     pin_reset: true,
+    updated_at: now
+  });
+}
+
+async function disableAdminNode(request, env) {
+  const adminKey = request.headers.get("x-admin-key");
+
+  if (!env.PROVISION_ADMIN_KEY || adminKey !== env.PROVISION_ADMIN_KEY) {
+    return new Response("Forbidden", { status: 403 });
+  }
+
+  let body;
+
+  try {
+    body = await request.json();
+  } catch {
+    return new Response("Invalid JSON", { status: 400 });
+  }
+
+  const publicSlug = sanitizeRequiredString(body.public_slug, 255);
+
+  if (!publicSlug) {
+    return Response.json({
+      error: "Node not found"
+    }, { status: 404 });
+  }
+
+  const node = await env.DB.prepare(`
+    SELECT
+      id,
+      public_slug
+    FROM nodes
+    WHERE public_slug = ?
+    LIMIT 1
+  `)
+    .bind(publicSlug)
+    .first();
+
+  if (!node) {
+    return Response.json({
+      error: "Node not found"
+    }, { status: 404 });
+  }
+
+  const now = new Date().toISOString();
+
+  await env.DB.prepare(`
+    UPDATE nodes
+    SET
+      status = 'disabled',
+      updated_at = ?
+    WHERE id = ?
+  `)
+    .bind(now, node.id)
+    .run();
+
+  await insertNodeEvent(env, {
+    nodeId: node.id,
+    eventType: "NODE_DISABLED",
+    actorType: "admin",
+    actorRef: null,
+    payload: {
+      public_slug: node.public_slug,
+      reason: "admin_disable"
+    },
+    createdAt: now
+  });
+
+  return Response.json({
+    public_slug: node.public_slug,
+    status: "disabled",
     updated_at: now
   });
 }
