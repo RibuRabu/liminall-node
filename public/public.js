@@ -372,6 +372,14 @@ function hideContactActions() {
   resetSecondaryActions();
 }
 
+function resetPublicPageState() {
+  hideContactActions();
+  els.reportSection.style.display = "none";
+  els.reportForm.style.display = "none";
+  els.reportSubtitle.textContent = "";
+  els.reportFeedback.textContent = "";
+}
+
 function showPrimaryActionSection() {
   els.primaryActionSection.style.display = "block";
 }
@@ -452,14 +460,15 @@ function renderReportSection(node) {
   els.reportTitle.textContent = t("reportTitle");
   els.reportSubtitle.textContent = t("reportSubtitleEnabled");
   els.reportForm.style.display = "block";
+  els.reportFeedback.textContent = "";
 }
 
 function renderNode(node) {
   currentNode = node;
 
-  els.nodeName.textContent = getTrimmedString(node.name || node.profile_name || t("pageTitle"));
-  els.nodeId.textContent = getTrimmedString(node.identifier || node.public_identifier || "ID#");
-  els.nodeMessage.textContent = getTrimmedString(node.message || node.public_message || t("defaultMessage"));
+  els.nodeName.textContent = getTrimmedString(node.name || t("pageTitle"));
+  els.nodeId.textContent = getTrimmedString(node.identifier || "ID#");
+  els.nodeMessage.textContent = getTrimmedString(node.message || t("defaultMessage"));
 
   renderStatus(node);
 
@@ -495,9 +504,9 @@ function renderNode(node) {
 
 async function loadNode() {
   const slug = getSlug();
+  resetPublicPageState();
 
   if (!slug) {
-    els.reportFeedback.textContent = t("missingSlug");
     return;
   }
 
@@ -507,7 +516,6 @@ async function loadNode() {
     });
 
     if (!res.ok) {
-      els.reportFeedback.textContent = t("nodeNotFound");
       return;
     }
 
@@ -515,7 +523,6 @@ async function loadNode() {
     renderNode(data);
   } catch (error) {
     console.error(error);
-    els.reportFeedback.textContent = t("loadFailed");
   }
 }
 
