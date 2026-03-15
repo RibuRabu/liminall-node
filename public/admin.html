@@ -274,6 +274,7 @@
               <tr>
                 <th>Slug</th>
                 <th>Name</th>
+                <th>Status</th>
                 <th>Identifier</th>
                 <th>Created</th>
                 <th>Updated</th>
@@ -281,7 +282,7 @@
             </thead>
             <tbody id="nodes-body">
               <tr>
-                <td colspan="5" class="muted">Load nodes to view the network list.</td>
+                <td colspan="6" class="muted">Load nodes to view the network list.</td>
               </tr>
             </tbody>
           </table>
@@ -438,7 +439,7 @@
       if (!state.nodes.length) {
         const row = document.createElement("tr");
         const cell = document.createElement("td");
-        cell.colSpan = 5;
+        cell.colSpan = 6;
         cell.className = "muted";
         cell.textContent = "No nodes returned.";
         row.appendChild(cell);
@@ -459,6 +460,7 @@
         const cells = [
           node.slug || "",
           node.name || "",
+          node.status || "",
           node.identifier || "",
           node.created_at || "",
           node.updated_at || ""
@@ -488,6 +490,7 @@
       const fieldOrder = [
         ["node_id", "Node ID"],
         ["public_slug", "Slug"],
+        ["status", "Status"],
         ["created_at", "Created"],
         ["updated_at", "Updated"],
         ["name", "Name"],
