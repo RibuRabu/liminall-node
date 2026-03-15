@@ -1623,6 +1623,7 @@ async function getOwnerAuthRecord(env, token) {
   const node = await env.DB.prepare(`
     SELECT
       id,
+      status,
       owner_token_hash,
       owner_pin_hash,
       owner_session_version,
@@ -1636,6 +1637,10 @@ async function getOwnerAuthRecord(env, token) {
     .first();
 
   if (!node) {
+    return null;
+  }
+
+  if ((node.status || "").trim().toLowerCase() === "disabled") {
     return null;
   }
 
@@ -1786,6 +1791,10 @@ async function getOwnerSessionRecord(request, env) {
   );
 
   if (!hasValidSession) {
+    return null;
+  }
+
+  if ((node.status || "").trim().toLowerCase() === "disabled") {
     return null;
   }
 
